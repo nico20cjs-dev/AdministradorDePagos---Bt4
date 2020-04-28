@@ -1,0 +1,18 @@
+
+Formateo Datos
+ - Expresar el "Monto" con signo $
+
+DataBase
+
+
+
+BackEnd
+
+FrontEnd
+ - Calcular el dolar de ese día
+ - Actualizar la version del plugin dataTables
+ - Hacer filtro de todos los campos
+
+Funciones
+ - Informar cuantos pagos hay en cada sub-directorio
+ - Tipificar cada pago Indicando a que Casa y/o Persona pertenese
