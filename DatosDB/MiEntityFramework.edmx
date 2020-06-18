@@ -1,0 +1,94 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="3.0" xmlns:edmx="http://schemas.microsoft.com/ado/2009/11/edmx">
+  <!-- EF Runtime content -->
+  <edmx:Runtime>
+    <!-- SSDL content -->
+    <edmx:StorageModels>
+      <Schema Namespace="masterModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
+        <EntityType Name="PagoEfectuado">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="NroTransaccion" Type="varchar" MaxLength="255" />
+          <Property Name="Ente" Type="varchar" MaxLength="255" />
+          <Property Name="NroCliente" Type="varchar" MaxLength="255" />
+          <Property Name="FechaVencimiento" Type="date" />
+          <Property Name="Cuota" Type="varchar" MaxLength="255" />
+          <Property Name="Referencia" Type="varchar" MaxLength="255" />
+          <Property Name="Concepto" Type="varchar" MaxLength="255" />
+          <Property Name="Path" Type="varchar" MaxLength="255" />
+          <Property Name="TipoComprobante" Type="int" />
+        </EntityType>
+        <EntityContainer Name="masterModelStoreContainer">
+          <EntitySet Name="PagoEfectuado" EntityType="Self.PagoEfectuado" Schema="dbo" store:Type="Tables" />
+        </EntityContainer>
+      </Schema>
+    </edmx:StorageModels>
+    <!-- CSDL content -->
+    <edmx:ConceptualModels>
+      <Schema Namespace="masterModel" Alias="Self" annotation:UseStrongSpatialTypes="false" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm">
+        <EntityType Name="PagoEfectuado">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="NroTransaccion" Type="String" MaxLength="255" FixedLength="false" Unicode="false" />
+          <Property Name="Ente" Type="String" MaxLength="255" FixedLength="false" Unicode="false" />
+          <Property Name="NroCliente" Type="String" MaxLength="255" FixedLength="false" Unicode="false" />
+          <Property Name="FechaVencimiento" Type="DateTime" Precision="0" />
+          <Property Name="Cuota" Type="String" MaxLength="255" FixedLength="false" Unicode="false" />
+          <Property Name="Referencia" Type="String" MaxLength="255" FixedLength="false" Unicode="false" />
+          <Property Name="Concepto" Type="String" MaxLength="255" FixedLength="false" Unicode="false" />
+          <Property Name="Path" Type="String" MaxLength="255" FixedLength="false" Unicode="false" />
+          <Property Name="TipoComprobante" Type="Int32" />
+        </EntityType>
+        <EntityContainer Name="masterEntities1" annotation:LazyLoadingEnabled="true">
+          <EntitySet Name="PagoEfectuado" EntityType="Self.PagoEfectuado" />
+        </EntityContainer>
+      </Schema>
+    </edmx:ConceptualModels>
+    <!-- C-S mapping content -->
+    <edmx:Mappings>
+      <Mapping Space="C-S" xmlns="http://schemas.microsoft.com/ado/2009/11/mapping/cs">
+        <EntityContainerMapping StorageEntityContainer="masterModelStoreContainer" CdmEntityContainer="masterEntities1">
+          <EntitySetMapping Name="PagoEfectuado">
+            <EntityTypeMapping TypeName="masterModel.PagoEfectuado">
+              <MappingFragment StoreEntitySet="PagoEfectuado">
+                <ScalarProperty Name="Id" ColumnName="Id" />
+                <ScalarProperty Name="NroTransaccion" ColumnName="NroTransaccion" />
+                <ScalarProperty Name="Ente" ColumnName="Ente" />
+                <ScalarProperty Name="NroCliente" ColumnName="NroCliente" />
+                <ScalarProperty Name="FechaVencimiento" ColumnName="FechaVencimiento" />
+                <ScalarProperty Name="Cuota" ColumnName="Cuota" />
+                <ScalarProperty Name="Referencia" ColumnName="Referencia" />
+                <ScalarProperty Name="Concepto" ColumnName="Concepto" />
+                <ScalarProperty Name="Path" ColumnName="Path" />
+                <ScalarProperty Name="TipoComprobante" ColumnName="TipoComprobante" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+        </EntityContainerMapping>
+      </Mapping>
+    </edmx:Mappings>
+  </edmx:Runtime>
+  <!-- EF Designer content (DO NOT EDIT MANUALLY BELOW HERE) -->
+  <Designer xmlns="http://schemas.microsoft.com/ado/2009/11/edmx">
+    <Connection>
+      <DesignerInfoPropertySet>
+        <DesignerProperty Name="MetadataArtifactProcessing" Value="EmbedInOutputAssembly" />
+      </DesignerInfoPropertySet>
+    </Connection>
+    <Options>
+      <DesignerInfoPropertySet>
+        <DesignerProperty Name="ValidateOnBuild" Value="true" />
+        <DesignerProperty Name="EnablePluralization" Value="false" />
+        <DesignerProperty Name="IncludeForeignKeysInModel" Value="true" />
+        <DesignerProperty Name="UseLegacyProvider" Value="false" />
+        <DesignerProperty Name="CodeGenerationStrategy" Value="Ninguno" />
+      </DesignerInfoPropertySet>
+    </Options>
+    <!-- Diagram content (shape and connector positions) -->
+    <Diagrams></Diagrams>
+  </Designer>
+</edmx:Edmx>

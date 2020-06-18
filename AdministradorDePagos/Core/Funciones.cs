@@ -6,6 +6,7 @@ using AdministradorDePagos.Models;
 using iTextSharp.text.pdf;
 using iTextSharp.text.pdf.parser;
 using System.IO;
+using DatosDB;
 
 namespace AdministradorDePagos.Core
 {
@@ -27,7 +28,8 @@ namespace AdministradorDePagos.Core
             int i = 0;
             try
             {
-
+                //DatosDB.Class1 obj = new DatosDB.Class1();
+                //var datos = obj.Leer();
 
                 var directorio = @"D:\Norma\000   PAGOS\";
                 //var path = @"D:\Norma\000   PAGOS\pagos (25).pdf";
@@ -118,7 +120,7 @@ namespace AdministradorDePagos.Core
 
                         using (StringReader readerTxt = new StringReader(text))
                         {
-                            var _pago = new PagoEfectuado();
+                            var _pago = new Models.PagoEfectuado();
 
                             string lineaAnterior = "";
                             string line;
@@ -292,6 +294,7 @@ namespace AdministradorDePagos.Core
 
                     reader.Close();
                 }
+
 
             }
             catch (Exception ex)

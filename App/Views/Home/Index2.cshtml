@@ -1,0 +1,128 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+<script>
+
+    var consultarDolar = function () {
+
+        $.ajax({
+            url: 'https://apis.datos.gob.ar/series/api/series/?ids=168.1_T_CAMBIOR_D_0_0_26&limit=5000&format=json',
+            type: 'GET',
+            //data:{d: "2019-11-31"},
+            
+            // si la conexion es exitosa, ejecutará la función "respuesta", definida allí mismo.
+            success: function (respuesta) {
+        
+
+                for (var i = 0; i < respuesta.data.length; i++) {
+                    var fecha = respuesta.data[i][0];
+                    var cotizacion = respuesta.data[i][1];
+
+                    if (fecha == "2019-11-20") {
+                        console.log(cotizacion);
+                        break;
+                    }
+                }
+
+                
+            }, //fin function respuesta
+            error: function (err) {
+        
+                if (err.status == 404) {
+                    console.log("NO se encontro el recurso!");
+                }
+        
+                //console.log("No se ha podido obtener la información");
+            }
+        });
+
+        //$.ajax({
+        //        url: 'https://api.estadisticasbcra.com/usd_of',
+        //        type: 'GET',
+        //        data:{d: "2019-11-31"},
+        //        // con la propiedad beforeSend le paso el tipo de autorizacion, en este caso será 'Bearer'  y luego el token que registré en el BCRA
+        //        beforeSend: function (xhr) {
+        //            xhr.setRequestHeader('Authorization', 'Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2MTA0OTY5NzAsInR5cGUiOiJleHRlcm5hbCIsInVzZXIiOiJuaWNvX2Nqc18yMEBob3RtYWlsLmNvbSJ9.sasNMErAS5ibIFS6sl23OJuPgItuxAcY4q_TLm8ZKlOT8RfXNsTDHoCFSes_zRaj-LelxWSdQvlsHQAj1G2Lvw');
+        //        },
+        //
+        //        // si la conexion es exitosa, ejecutará la función "respuesta", definida allí mismo.
+        //        success: function (respuesta) {
+        //
+        //            // imprimo el valor de respuesta en la consola, para debug.
+        //            console.log(respuesta);
+        //
+        //            // creo una variable "listaAPI y le asigno el DIV que definí arriba, con el "id:lista-api".
+        //            var listaAPI = $("#lista-api");
+        //
+        //            $.each(respuesta, function (index, miembro) {
+        //                listaAPI.append(
+        //                    '<div>' +
+        //                    '<p>' + 'Fecha Cotizacion: ' + miembro.d + '<br>' +
+        //                    'Importe: $ ' + miembro.v + '<br>' +
+        //                    '<br>' + '______________________________________' +
+        //                    '</div>'
+        //                );
+        //            });
+        //        }, //fin function respuesta
+        //    error: function (err) {
+        //
+        //        if (err.status == 404) {
+        //            console.log("NO se encontro el recurso!");
+        //        }
+        //
+        //        //console.log("No se ha podido obtener la información");
+        //    }
+        //});
+
+    };
+
+    var navegar = function () {
+        
+    };
+
+    $(document).ready(function () {
+
+        $('#btnConsultarDolar').click(consultarDolar());
+
+        $('#btnLeerPdf').click(function(){
+            //$(this).hide();
+
+            $.ajax({
+	            url: 'Home/LeerPDF/',
+	            success: function(respuesta) {
+		            console.log("OK");
+	            },
+                error: function (err) {
+
+                    if (err.status == 404) {
+                        console.log("NO se encontro el recurso!");
+                    }
+
+                    //console.log("No se ha podido obtener la información");
+                }
+            });
+
+        });
+    });
+
+</script>
+
+<br />
+
+<div class="row">
+    <div class="col-sm-3">
+        <iframe width="140px" height="150px" src="https://www.dolarsi.com/cotizador/cotizadorDolarsiFull.php" frameborder="0" scrolling="0" allowfullscreen=""></iframe>
+    </div>
+    <div class="col-sm-6">
+        <button id="btnLeerPdf" type="button" class="btn btn-primary">
+            Leer PDF
+        </button>
+        <button id="btnConsultarDolar" type="button" class="btn btn-default">
+            Consultar DOLAR
+        </button>
+    </div>
+    <div class="col-sm-3">
+
+    </div>
+</div>
