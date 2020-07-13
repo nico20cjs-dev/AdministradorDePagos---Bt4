@@ -26,45 +26,48 @@ namespace AdminPagosDLL.Core
         public List<Pago> InterpretarPDF(string path = "")
         {
             int i = 0;
+            
             try
             {
                 //DatosDB.Class1 obj = new DatosDB.Class1();
                 //var datos = obj.Leer();
 
                 var directorio = @"D:\Norma\000   PAGOS\";
-                //var path = @"D:\Norma\000   PAGOS\pagos (25).pdf";
 
+                //Obtener todos los archivos, de extención .pdf en todos los subdirectorios de ...
                 var files = Directory.EnumerateFiles(directorio, "*.pdf", SearchOption.AllDirectories);
                 int cantidadArchivos = files.Count();
                 var lstArchivos = files.ToList();
+                PdfReader reader = null;
+                var format = new Formatos();
 
                 for (i = 0; i < cantidadArchivos; i++)
                 {
                     path = lstArchivos[i];
 
-                    if (i == 220)
+                    if (i == 120 || path.Contains("2020-06-22 CEVIGE VTO"))
                     {
                         break;
                     }
                     
-                    PdfReader reader = null;
                     try
                     {
                         reader = new PdfReader(path);
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
                         //Si no se puede abrir puede tener pass
                         continue;
                     }
                     
                     string text = string.Empty;
-                    var format = new Formatos();
+                    
                     for (int page = 1; page < 2; page++)
                     {
                         bool leer = false;
                         text += PdfTextExtractor.GetTextFromPage(reader, page);
 
+                        //TODO: optimizar, en vez de iterar x las lineas y leerlas para compararlas -> usar "text.Contein(textoABuscar)"
                         using (StringReader readerTxt = new StringReader(text))
                         {
                             string linea;
@@ -74,8 +77,7 @@ namespace AdminPagosDLL.Core
                             while ((linea = readerTxt.ReadLine()) != null && !identificoTipo)
                             {
                                 if (String.IsNullOrEmpty(linea)) continue;
-                                //linea = linea.Trim();
-
+                                
                                 switch (linea)
                                 {
                                     case "Pago efectuado":
@@ -158,8 +160,14 @@ namespace AdminPagosDLL.Core
 
                                         if (!String.IsNullOrEmpty(auxFechaPago))
                                         {
-                                            //TODO: agregarle la "Hora" al "Fecha de Pago"
-                                            //_pago.FechaPago = format.CrearFecha(auxFechaPago);
+                                            //Le agrega la hora, minutos y segundos a la "Fecha de Pago"
+                                            int hora = int.Parse(lineaFormato[1]);
+                                            int min = int.Parse(lineaFormato[2]);
+                                            int sec = int.Parse(lineaFormato[3]);
+
+                                            _pago.FechaPago = _pago.FechaPago.AddHours(hora)
+                                                                   .AddMinutes(min)
+                                                                   .AddSeconds(sec);
                                         }
 
                                         break;
@@ -195,7 +203,8 @@ namespace AdminPagosDLL.Core
                                         _pago.Importe = decimal.Parse(valor);
                                         break;
                                     case "Fecha de Vencimiento":
-                                        _pago.FechaVencimiento = format.CrearFecha(auxFechaPago);
+                                        //_pago.FechaVencimiento = format.CrearFecha(auxFechaPago);
+                                        _pago.FechaVencimiento = format.CrearFecha(valor);
                                         break;
                                     case "Cuota":
                                     case "Cuota/Año":
