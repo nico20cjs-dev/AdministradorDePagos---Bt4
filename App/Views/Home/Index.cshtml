@@ -157,6 +157,7 @@
 
         </ul>
         <!-- End of Sidebar -->
+
         <!-- Content Wrapper -->
         <div id="content-wrapper" class="d-flex flex-column">
 
@@ -294,6 +295,7 @@
                                     <a class="toggle-vis" data-column="5">Cuota</a> -
                                     <a class="toggle-vis" data-column="6">Path</a> -
                                     <a class="toggle-vis" data-column="7">Tipo Comp</a>
+                                    <a class="toggle-vis" data-column="10">Importe U$S</a>
                                 </div>
                             </div>
                             <div class="card-body">
@@ -313,6 +315,7 @@
                                                 <th>Tipo Comp</th>
                                                 <th>Fecha Pago</th>
                                                 <th>Importe $</th>
+                                                <th>Importe U$S</th>
                                             </tr>
                                         </thead>
                                         <tbody id="contenTabla">
@@ -666,33 +669,51 @@
 
     var abrirPDF = function () {
         $.ajax({
-	            url: 'Home/LeerPDF/',
-	            success: function(respuesta) {
-                    console.log("OK");
+	        url: 'Home/LeerPDF/',
+	        success: function(respuesta) {
+                console.log("OK");
 
-                    var lstMsj = respuesta.Mensajes.Lista;
+                var lstMsj = respuesta.Mensajes.Lista;
 
-                    if (lstMsj.length == 0) {
+                if (lstMsj.length == 0) {
 
-                    } else {
-                        limpiarMensajes();
-                        procesarMensajes(lstMsj);
-                    }
-	            },
-                error: function (err) {
-
-                    if (err.status == 404) {
-                        console.log("NO se encontro el recurso!");
-                        //err.responseText
-                    }
-
+                } else {
+                    limpiarMensajes();
+                    procesarMensajes(lstMsj);
                 }
-            });
+	        },
+            error: function (err) {
+
+                if (err.status == 404) {
+                    console.log("NO se encontro el recurso!");
+                    //err.responseText
+                }
+
+            }
+        });
     };
 
-    
+    var getCacheCotizacionHistoria = function () {
+        $.ajax({
+	        url: 'Home/GetCacheCotizacionHistoria/',
+	        success: function(respuesta) {
+                
+	        },
+            error: function (err) {
+
+                if (err.status == 404) {
+                    console.log("NO se encontro el recurso!");
+                    //err.responseText
+                }
+
+            }
+        });
+    };
 
     $(document).ready(function () {
+
+        //Se cargan los datos de la cotización histórica
+        getCacheCotizacionHistoria();
 
         //Se resetean variables
         reiniciarVariablesGrales();
@@ -805,6 +826,7 @@
                                     pago.TipoComprobante, // 0
                                     aux_fechaPago, // "2018-08-09T09:53:23"
                                     pago.Importe, // 377.1
+                                    pago.ImporteDolar, // 377.1
                             ]).draw(true);
                         });
 

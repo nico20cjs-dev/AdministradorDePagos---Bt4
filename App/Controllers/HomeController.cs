@@ -19,6 +19,8 @@ namespace AdminPagosDLL.Controllers
     {
         public FMensaje Mensajes = new FMensaje();
 
+        public static string TxtCotizacionHistoria = "";
+
         public ActionResult Index()
         {
 
@@ -27,47 +29,76 @@ namespace AdminPagosDLL.Controllers
             return View();
         }
 
-        private string ConvertDataTableToHTML(DataTable dt)
+        //private string ConvertDataTableToHTML(DataTable dt)
+        //{
+        //    string html = "<table>";
+        //    //add header row
+        //    html += "<tr>";
+        //    for (int i = 0; i < dt.Columns.Count; i++)
+        //        html += "<td>" + dt.Columns[i].ColumnName + "</td>";
+        //    html += "</tr>";
+        //    //add rows
+        //    for (int i = 0; i < dt.Rows.Count; i++)
+        //    {
+        //        html += "<tr>";
+        //        for (int j = 0; j < dt.Columns.Count; j++)
+        //            html += "<td>" + dt.Rows[i][j].ToString() + "</td>";
+        //        html += "</tr>";
+        //    }
+        //    html += "</table>";
+        //    return html;
+        //}
+
+        //private string ConvertListPagosToHTML(List<Pago> lstPagos)
+        //{
+        //    string html = "<tbody>";
+        //    //add header row
+        //    //html += "<tr>";
+        //    //for (int i = 0; i < lstPagos.Count; i++)
+        //    //{
+        //    //    html += "<td>" + "PAGO" + "</td>";
+        //    //}
+        //    //html += "</tr>";
+        //    //add rows
+        //    for (int i = 0; i < lstPagos.Count; i++)
+        //    {
+        //        html += "<tr>";
+        //        html += "    <td>" + lstPagos[i].Importe.ToString() + "</td>";
+        //        html += "</tr>";
+        //    }
+        //    html += "</tbody>";
+        //    return html;
+        //}
+
+        public void GetCacheCotizacionHistoria()
         {
-            string html = "<table>";
-            //add header row
-            html += "<tr>";
-            for (int i = 0; i < dt.Columns.Count; i++)
-                html += "<td>" + dt.Columns[i].ColumnName + "</td>";
-            html += "</tr>";
-            //add rows
-            for (int i = 0; i < dt.Rows.Count; i++)
+            Mensajes.Limpiar();
+            var retorno = Json(new { Mensajes }, JsonRequestBehavior.AllowGet);
+            try
             {
-                html += "<tr>";
-                for (int j = 0; j < dt.Columns.Count; j++)
-                    html += "<td>" + dt.Rows[i][j].ToString() + "</td>";
-                html += "</tr>";
+                if (String.IsNullOrEmpty(TxtCotizacionHistoria))
+                {
+                    using (var client = new System.Net.WebClient())
+                    {
+                        TxtCotizacionHistoria = client.DownloadString("https://apis.datos.gob.ar/series/api/series/?ids=168.1_T_CAMBIOR_D_0_0_26&limit=5000&format=json");
+                    }
+
+                    CotizacionHistorica.CargarCotizacion(TxtCotizacionHistoria);
+                }
+
             }
-            html += "</table>";
-            return html;
+            catch (Exception ex)
+            {
+                Mensajes.Agregar(ex.Message);
+                //return retorno;
+            }
         }
 
-        private string ConvertListPagosToHTML(List<Pago> lstPagos)
-        {
-            string html = "<tbody>";
-            //add header row
-            //html += "<tr>";
-            //for (int i = 0; i < lstPagos.Count; i++)
-            //{
-            //    html += "<td>" + "PAGO" + "</td>";
-            //}
-            //html += "</tr>";
-            //add rows
-            for (int i = 0; i < lstPagos.Count; i++)
-            {
-                html += "<tr>";
-                html += "    <td>" + lstPagos[i].Importe.ToString() + "</td>";
-                html += "</tr>";
-            }
-            html += "</tbody>";
-            return html;
-        }
-
+        /// <summary>
+        /// Devuelve el comprobante de pago
+        /// </summary>
+        /// <param name="path">Ruta de ubicación del pdf.</param>
+        /// <returns></returns>
         public FileResult GetReport(string path)
         {
             string ReportURL = path;
@@ -75,6 +106,10 @@ namespace AdminPagosDLL.Controllers
             return File(FileBytes, "application/pdf");
         }
 
+        /// <summary>
+        /// Lee y procesa todos los Pdfs.
+        /// </summary>
+        /// <returns></returns>
         public JsonResult LeerPDF()
         {
             Mensajes.Limpiar();

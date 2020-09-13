@@ -45,10 +45,10 @@ namespace AdminPagosDLL.Core
                 {
                     path = lstArchivos[i];
 
-                    if (i == 120 || path.Contains("2020-06-22 CEVIGE VTO"))
-                    {
-                        break;
-                    }
+                    //if (i == 120 || path.Contains("2020-06-22 CEVIGE VTO"))
+                    //{
+                    //    break;
+                    //}
                     
                     try
                     {
@@ -252,6 +252,10 @@ namespace AdminPagosDLL.Core
                             }
 
                             //D:\Norma\000   PAGOS\18-08 - Arba NO SE.pdf
+
+                            //Calcular valor en Dolares
+                            _pago.ImporteDolar = (decimal)CotizacionHistorica.GetCotizacionPorFecha(_pago.FechaPago);
+
                             _pago.Path = path;
 
                             if (_pago.FechaPago.Day == 7 && _pago.FechaPago.Month == 9)

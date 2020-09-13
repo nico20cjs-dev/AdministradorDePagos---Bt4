@@ -28,8 +28,6 @@ namespace AdministradorDePagos.Models
         public DateTime FechaPago { get; set; }
         public decimal Importe { get; set; }
 
-        
-
         #endregion
 
     }

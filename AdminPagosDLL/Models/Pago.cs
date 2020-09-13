@@ -28,7 +28,7 @@ namespace AdminPagosDLL.Models
         public DateTime FechaPago { get; set; }
         public decimal Importe { get; set; }
 
-        
+        public decimal ImporteDolar { get; set; }
 
         #endregion
 
