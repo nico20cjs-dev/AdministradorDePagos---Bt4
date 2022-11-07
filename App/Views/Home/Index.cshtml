@@ -332,7 +332,7 @@
 
                     <!-- Content Row -->
 
-                    <div class="row">
+                    <div class="row ocultar">
 
                         <!-- Area Chart -->
                         <div class="col-xl-8 col-lg-7">
@@ -403,7 +403,7 @@
                     </div>
 
                     <!-- Content Row -->
-                    <div class="row">
+                    <div class="row ocultar">
 
                         <!-- Content Column -->
                         <div class="col-lg-6 mb-4">
@@ -638,7 +638,7 @@
     };
 
     var totalizarPesos = function () {
-        let indexDolar = 9;
+        let indexDolar = 9; //Posición de columna de importe en Pesos
         let totalDolares = 0;
         var table = $('#dataTable').dataTable().api()
         let valoresDolar = table.rows({ search: 'applied' }).data();
@@ -653,7 +653,7 @@
     };
 
     var totalizarDolares = function () {
-        let indexDolar = 10;
+        let indexDolar = 10; //Posición de columna de importe en Dolares
         let totalDolares = 0;
         var table = $('#dataTable').dataTable().api()
         let valoresDolar = table.rows({ search: 'applied' }).data();

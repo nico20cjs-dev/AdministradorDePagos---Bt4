@@ -1,0 +1,41 @@
+** Fron **
+ - centrar clumnas: vto, path, fecha pago, importe, etc
+
+** Back **
+ - 
+
+** Funciones varias **
+ - Filtros: Ente, periodos (igual, may, men, entre), importe (igual, may, men, entre), cuota
+ - Filtro por casas, direcciones o personas 
+   (agrupando todos los servicios de una casa, y todas las casas de una persona)
+ - Exportar en pdf, scv, html
+ - Generar compatibilidad para nuevos formatos de pagos (identificar los mismos, se guardan en la List<Pagos> variable del sistema "noVal")
+ - una vez imple bd trabajar princip con bd.
+ - Organizarlos pdf, en las carpetas correctas.
+ - Identificar x bd los pdf duplicados.
+ - Barra de progressbar al leer pdf
+
+** Optimizar **
+ - No leer si contiene: "Detalle de Movimientos" (es del homeBanking), etc
+
+** Parametros **
+(ser una tabla en bd, mientras puede ser en el webconfig)
+ - Path leido.
+
+** Git **
+ - push del source
+
+** Base de Datos **
+ - crear una bd Sql
+ - implementar conexion con el sistema
+ - guardar 
+ - crear funcion de sincronizacion de pagos (abm de pagos), q informe cuantos se agrearon, etc
+
+** Log **
+ - Definir alcance
+ - definir e implementar parametria
+ - implementar logica
+
+** Deploy en Notebook **
+ - crear .rar
+ - llevar e implementar

@@ -57,6 +57,15 @@ namespace AdminPagosDLL.Core
                     catch (Exception ex)
                     {
                         //Si no se puede abrir puede tener pass
+                        if (ex.Message.Contains("password"))
+                        {
+
+                        }
+                        else
+                        {
+                            //InvalidPdfException
+                        }
+
                         continue;
                     }
                     
