@@ -7,6 +7,7 @@ using iTextSharp.text.pdf;
 using iTextSharp.text.pdf.parser;
 using System.IO;
 using DatosDB;
+using System.Configuration;
 
 namespace AdminPagosDLL.Core
 {
@@ -32,7 +33,8 @@ namespace AdminPagosDLL.Core
                 //DatosDB.Class1 obj = new DatosDB.Class1();
                 //var datos = obj.Leer();
 
-                var directorio = @"D:\Norma\000   PAGOS\";
+                string rutaConfig = ConfigurationManager.AppSettings["RutaDePagos"];
+                var directorio = !String.IsNullOrEmpty(rutaConfig) ? rutaConfig : @"D:\Norma\000   PAGOS\";
 
                 //Obtener todos los archivos, de extención .pdf en todos los subdirectorios de ...
                 var files = Directory.EnumerateFiles(directorio, "*.pdf", SearchOption.AllDirectories);
