@@ -36,6 +36,12 @@ namespace AdminPagosDLL.Core
                 string rutaConfig = ConfigurationManager.AppSettings["RutaDePagos"];
                 var directorio = !String.IsNullOrEmpty(rutaConfig) ? rutaConfig : @"D:\Norma\000   PAGOS\";
 
+                //Validacion de directorio
+                if (!Directory.Exists(rutaConfig))
+                {
+                    directorio = @"D:\Norma\000   PAGOS\";
+                }
+
                 //Obtener todos los archivos, de extención .pdf en todos los subdirectorios de ...
                 var files = Directory.EnumerateFiles(directorio, "*.pdf", SearchOption.AllDirectories);
                 int cantidadArchivos = files.Count();
@@ -47,10 +53,10 @@ namespace AdminPagosDLL.Core
                 {
                     path = lstArchivos[i];
 
-                    //if (i == 120 || path.Contains("2020-06-22 CEVIGE VTO"))
-                    //{
-                    //    break;
-                    //}
+                    if (i == 120 || path.Contains("2020-06-22 CEVIGE VTO"))
+                    {
+                        break;
+                    }
                     
                     try
                     {
