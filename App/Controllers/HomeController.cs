@@ -12,6 +12,7 @@ using iTextSharp.text.pdf;
 using iTextSharp.text.pdf.parser;
 using System.IO;
 using System.Data;
+using System.Web.UI;
 
 namespace AdminPagosDLL.Controllers
 {
@@ -20,6 +21,7 @@ namespace AdminPagosDLL.Controllers
         public FMensaje Mensajes = new FMensaje();
 
         public static string TxtCotizacionHistoria = "";
+        public static List<Pago> LstPagos = new List<Pago>();
 
         public ActionResult Index()
         {
@@ -114,6 +116,10 @@ namespace AdminPagosDLL.Controllers
         {
             Mensajes.Limpiar();
             var retorno = Json(new { Mensajes }, JsonRequestBehavior.AllowGet);
+
+            //Primero lee la cache
+            if (LstPagos.Count > 0) return Json(new { Mensajes, pagos = LstPagos }, JsonRequestBehavior.AllowGet);
+
             try
             {
                 var funcion = new Funciones();
@@ -124,6 +130,8 @@ namespace AdminPagosDLL.Controllers
                     Mensajes.Agregar(funcion.Mensajes.Lista);
                     return retorno;
                 }
+
+                LstPagos = pagos;
 
                 return Json(new { Mensajes, pagos }, JsonRequestBehavior.AllowGet);
 

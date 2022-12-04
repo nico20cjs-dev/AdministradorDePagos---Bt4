@@ -43,7 +43,7 @@
     <div id="wrapper">
 
         <!-- Sidebar -->
-        <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion toggled" id="accordionSidebar">
+        <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion toggled ocultar" id="accordionSidebar">
 
             <!-- Sidebar - Brand -->
             <a class="sidebar-brand d-flex align-items-center justify-content-center" href="index.html">
@@ -158,13 +158,12 @@
 
         </ul>
         <!-- End of Sidebar -->
-
         <!-- Content Wrapper -->
         <div id="content-wrapper" class="d-flex flex-column">
 
             <!-- Main Content -->
             <div id="content">
-                
+
                 <!-- Begin Page Content -->
                 <div class="container-fluid">
 
@@ -174,7 +173,7 @@
                     <div class="row">
 
                         <!-- PESOS -->
-                        <div class="col-xl-3 col-md-6 mb-5 paneles">
+                        <div class="col-xl-3 col-md-3 col-xs-6 mb-5 paneles">
                             <div class="card border-left-primary shadow h-100 py-2">
                                 <div class="card-body">
                                     <div class="row no-gutters align-items-center">
@@ -191,7 +190,7 @@
                         </div>
 
                         <!-- DOLARES -->
-                        <div class="col-xl-3 col-md-6 mb-5 paneles">
+                        <div class="col-xl-3 col-md-3 col-xs-6 mb-5 paneles">
                             <div class="card border-left-success shadow h-100 py-2">
                                 <div class="card-body">
                                     <div class="row no-gutters align-items-center">
@@ -250,14 +249,26 @@
                             </div>
                         </div>
 
-                        <!-- Page Heading -->
-                        <div class="align-items-center justify-content-between mb-4">
-                            <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm"><i class="fas fa-download fa-sm text-white-50"></i> Generate Report</a>
+                        <div class="col-sm-6 botones">
+
+                            <button id="btnLeerPdf" type="button" class="btn btn-primary">
+                                <i class="fa fa-eye" aria-hidden="true"></i>
+                                Leer Pagos
+                            </button>
+                            <button id="btnConsultarDolar" type="button" class="btn btn-info ocultar">
+                                Consultar DOLAR
+                            </button>
+                            <button id="btnTotalizarDolares" type="button" class="btn btn-danger ocultar">
+                                Calcular totalas
+                            </button>
+                            <button onclick="notEnable();" id="exportReport" class="d-none d-sm-inline-block btn btn-primary shadow-sm ocultar">
+                                <i class="fas fa-download fa-sm text-white-50"></i> Generar Reporte
+                            </button>
                         </div>
 
                         @*<div class="col-xl-2 col-sm-3">
-                <iframe width="140px" height="150px" src="https://www.dolarsi.com/cotizador/cotizadorDolarsiFull.php" frameborder="0" scrolling="0" allowfullscreen=""></iframe>
-            </div>*@
+                                <iframe width="140px" height="150px" src="https://www.dolarsi.com/cotizador/cotizadorDolarsiFull.php" frameborder="0" scrolling="0" allowfullscreen=""></iframe>
+                            </div>*@
 
                     </div>
 
@@ -267,37 +278,17 @@
                     </div>
 
                     <div class="row">
-                        <div class="col-sm-6">
-                            <button id="btnLeerPdf" type="button" class="btn btn-primary">
-                                Leer PDF
-                            </button>
-                            <button id="btnConsultarDolar" type="button" class="btn btn-default">
-                                Consultar DOLAR
-                            </button>
-                            <button id="btnTotalizarDolares" type="button" class="btn btn-default">
-                                Calcular totalas
-                            </button>
-                        </div>
-                        <div class="col-sm-3">
-
-                        </div>
-                    </div>
-
-                    @*Filtros*@
-                    Importe $
-                    <input type="text" id="min" name="min">
-                    <input type="text" id="max" name="max">
-                    
-
-                    <div class="row">
 
                         <!-- DataTales Example -->
                         <div class="card shadow mb-4 col-lg-12">
-                            <div class="card-header py-3">
+                            <div class="card-header py-3 ocultar">
                                 <h6 class="m-0 font-weight-bold text-primary">DataTables Example</h6>
                             </div>
-                            <div>
-                                <div>
+                            <div id="cabeceraTabla" class="row">
+                                <div class="col-md-1 filtro" data-toggle="modal" data-target="#mofalFilter">
+                                    <button type="button" class="btn btn-primary" title="Filtrar"><i class="fa fa-filter" aria-hidden="true"></i></button>
+                                </div>
+                                <div class="col-md-10" id="showHiddenCol">
                                     Mostrar/ocultar:
                                     <a class="toggle-vis" data-column="0">Nro Transacción</a> -
                                     <a class="toggle-vis" data-column="1">Ente</a> -
@@ -305,13 +296,14 @@
                                     <a class="toggle-vis" data-column="3">Nº CtaDebito</a> -
                                     <a class="toggle-vis" data-column="4">Fecha Vto</a> -
                                     <a class="toggle-vis" data-column="5">Cuota</a> -
-                                    <a class="toggle-vis" data-column="6">Path</a> -
+                                    <a class="toggle-vis" data-column="6">Pdf</a> -
                                     <a class="toggle-vis" data-column="7">Tipo Comp</a>
                                     <a class="toggle-vis" data-column="10">Importe U$S</a>
                                     <a class="toggle-vis" data-column="11">Propiedad</a>
                                 </div>
+
                             </div>
-                            <div class="card-body">
+                            <div class="card-body dataTable">
                                 <div class="table-responsive">
                                     <table class="table table-bordered stripe" id="dataTable" width="100%" cellspacing="0">
                                         <thead>
@@ -323,8 +315,8 @@
                                                 <th>Fecha Vto</th>
                                                 <th>Cuota</th>
                                                 @*<th>Referencia</th>
-                                                <th>Concepto</th>*@
-                                                <th>Path</th>
+                                                    <th>Concepto</th>*@
+                                                <th>Pdf</th>
                                                 <th>Tipo Comp</th>
                                                 <th>Fecha Pago</th>
                                                 <th>Importe $</th>
@@ -345,8 +337,8 @@
                                                 <th>Fecha Vto</th>
                                                 <th>Cuota</th>
                                                 @*<th>Referencia</th>
-                                                <th>Concepto</th>*@ 
-                                                <th>Path</th>
+                                                    <th>Concepto</th>*@
+                                                <th>Pdf</th>
                                                 <th>Tipo Comp</th>
                                                 <th>Fecha Pago</th>
                                                 <th>Importe $</th>
@@ -401,6 +393,42 @@
                 <div class="modal-footer">
                     <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
                     <a class="btn btn-primary" href="login.html">Logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Modal -->
+    <div class="modal fade" id="mofalFilter" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Filtros</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+
+                    @*Filtros*@
+                    <div class="form-group row">
+                        <label class="col-sm-2 col-form-label"><strong>Importe $</strong></label>
+
+                        <label class="col-sm-1 col-form-label">desde</label>
+                        <div class="col-sm-4">
+                            <input type="text" id="min" name="min" class="form-control" id="ImporteDesde" placeholder="$ 0">
+                        </div>
+                        <label class="col-sm-1 col-form-label">hasta</label>
+                        <div class="col-sm-4">
+                            <input type="text" id="max" name="max" class="form-control" id="Importehasta" placeholder="$ 0">
+                        </div>
+                    </div>
+                    
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+                    <button type="button" class="btn btn-primary" data-dismiss="modal">Filtrar</button>
                 </div>
             </div>
         </div>
@@ -546,32 +574,6 @@
         } );
     };
 
-    var abrirPDF = function () {
-        $.ajax({
-	        url: 'Home/LeerPDF/',
-	        success: function(respuesta) {
-                console.log("OK");
-
-                var lstMsj = respuesta.Mensajes.Lista;
-
-                if (lstMsj.length == 0) {
-
-                } else {
-                    limpiarMensajes();
-                    procesarMensajes(lstMsj);
-                }
-	        },
-            error: function (err) {
-
-                if (err.status == 404) {
-                    console.log("NO se encontro el recurso!");
-                    //err.responseText
-                }
-
-            }
-        });
-    };
-
     var getCacheCotizacionHistoria = function () {
         $.ajax({
 	        url: 'Home/GetCacheCotizacionHistoria/',
@@ -644,12 +646,8 @@
                         ]).draw(true);
                     });
 
-                    //Redibuja la tabla para ajustar ancho de columnas
-                    t.columns.adjust().draw();
-
-                    //asignarClickPatk();
-
-                    //console.log("2");
+                    //Acciones luego de lectura de Pagos
+                    callBackLeerPdf();
 
                 } else {
                     limpiarMensajes();
@@ -672,7 +670,35 @@
         });
     };
 
-    
+    var notEnable = function () {
+        alert("Todavía no esta disponible esta funcionalidad");
+    }
+
+    var callBackLeerPdf = function () {
+        var table = $('#dataTable').DataTable();
+
+        //Redibuja la tabla para ajustar ancho de columnas
+        table.columns.adjust().draw();
+
+        //asignarClickPatk();
+
+        //console.log("2");
+
+        totalizarPagos();
+
+        //setTimeout(function () {
+        //    var table2 = $('#dataTable').removeAttr('width').DataTable({
+        //        scrollY: "300px",
+        //        scrollX: true,
+        //        scrollCollapse: true,
+        //        paging: false,
+        //        columnDefs: [
+        //            { width: 200, targets: 0 }
+        //        ],
+        //        fixedColumns: true
+        //    });
+        //}, 1000);
+    };
 
     $(document).ready(function () {
 
@@ -721,6 +747,16 @@
                 }
             },
 
+            "aoColumnDefs": [
+                { "bSortable": false, "aTargets": [0] },
+                { "sWidth": "25px", "aTargets": [6] },
+                { "sWidth": "90px", "aTargets": [4, 8] },
+                { "sWidth": "100px", "aTargets": [9, 10] },
+                /*{ "sWidth": "10px", "aTargets": [0, 1] },*/                
+                /*{ "sWidth": "80px", "aTargets": [2] },*/
+            ],
+            "bAutoWidth": false,
+
             //Fila inferior de la tabla con filtros sobre cada columna
             initComplete: function () {
                 // Apply the search
@@ -737,14 +773,13 @@
                     });
             },
 
-
             //Se configurar para el filtro
             orderCellsTop: true,
             fixedHeader: true
         });
 
-        //Se ocultan columnas: NroTransaccion, Cliente, Nº CtaDebito, Tipo Comp
-        table.columns( [ 0, 2, 3, 5, 7 ] ).visible( false, false );
+        //Se ocultan columnas: NroTransaccion, Cliente, Nº CtaDebito, Tipo Comp, Propiedad
+        table.columns( [ 0, 2, 3, 5, 7, 11 ] ).visible( false, false );
         table.columns.adjust().draw(false); // adjust column sizing and redraw
 
         $('a.toggle-vis').on( 'click', function (e) {
@@ -794,7 +829,10 @@
         // Event listener to the two range filtering inputs to redraw on input
         $('#min, #max').keyup(function () {
             table.draw();
+            totalizarPagos();
         });
+
+        leerPdf();
     });
 
 </script>

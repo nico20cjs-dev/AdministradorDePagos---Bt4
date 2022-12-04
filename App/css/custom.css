@@ -4,15 +4,60 @@
 }
 
 .ocultar {
-    visibility: hidden
+    display: none;
 }
 
 .paneles {
-    max-height: 100px;
+    max-height: 70px;
+    margin-bottom: 0px !important;
 }
+    .paneles .card-body {
+        padding-top: 5px;
+        padding-left: 20px;
+        padding-bottom: 5px;
+    }
 
 tfoot input {
     width: 100%;
     padding: 3px;
     box-sizing: border-box;
+}
+
+.btn .fa {
+    margin-right: 0.2rem;
+}
+
+#showHiddenCol {
+    margin-top: 12px;
+    margin-left: 20px;
+}
+
+.botones {
+    margin-top: 15px;
+}
+
+#cabeceraTabla {
+    margin-left: 20px;
+}
+
+.filtro {
+    margin-top: 8px;
+}
+
+.card-body.dataTable {
+    padding-top: 10px;
+}
+table.display {
+    table-layout: fixed;
+}
+
+@media (max-width: 1366px) {
+    tbody tr td {
+        padding-top: 5px !important;
+        padding-bottom: 5px !important;
+    }
+
+    body {
+        font-size: 0.85rem;
+    }    
 }

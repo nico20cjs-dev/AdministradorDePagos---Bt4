@@ -33,13 +33,14 @@ namespace AdminPagosDLL.Core
                 //DatosDB.Class1 obj = new DatosDB.Class1();
                 //var datos = obj.Leer();
 
+                string defecto = @"D:\Norma\000   PAGOS\";
                 string rutaConfig = ConfigurationManager.AppSettings["RutaDePagos"];
-                var directorio = !String.IsNullOrEmpty(rutaConfig) ? rutaConfig : @"D:\Norma\000   PAGOS\";
+                var directorio = !String.IsNullOrEmpty(rutaConfig) ? rutaConfig : defecto;
 
                 //Validacion de directorio
                 if (!Directory.Exists(rutaConfig))
                 {
-                    directorio = @"D:\Norma\000   PAGOS\";
+                    directorio = defecto;
                 }
 
                 //Obtener todos los archivos, de extención .pdf en todos los subdirectorios de ...
@@ -49,14 +50,25 @@ namespace AdminPagosDLL.Core
                 PdfReader reader = null;
                 var format = new Formatos();
 
-                for (i = 0; i < cantidadArchivos; i++)
+                //ArchivosLeidos
+                int cantidadArchivosAux = cantidadArchivos;
+                string filesReaded = ConfigurationManager.AppSettings["ArchivosLeidos"];
+                if (!String.IsNullOrEmpty(filesReaded))
+                {
+                    if (int.TryParse(filesReaded, out int aux) && int.Parse(filesReaded) > 0)
+                    {
+                        cantidadArchivosAux = int.Parse(filesReaded);
+                    }
+                }
+
+                for (i = 0; i < cantidadArchivosAux; i++)
                 {
                     path = lstArchivos[i];
 
-                    if (i == 120 || path.Contains("2020-06-22 CEVIGE VTO"))
-                    {
-                        break;
-                    }
+                    //if (i == 120 || path.Contains("2020-06-22 CEVIGE VTO"))
+                    //{
+                    //    break;
+                    //}
                     
                     try
                     {
