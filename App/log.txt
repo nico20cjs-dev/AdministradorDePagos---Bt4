@@ -1,0 +1,49 @@
+﻿defecto: D:\Norma\000   PAGOS\
+rutaConfig: C:\Users\nico_\Downloads\000   PAGOS
+Existe rutaConfig?
+paso 0
+paso 1
+Existe rutaConfig?
+
+ Directorio a leer: C:\Users\nico_\Downloads\000   PAGOS
+Existe rutaConfig?
+
+ Directorio a leer: C:\Users\nico_\Downloads\000   PAGOS
+
+ Directorio a leer: C:\PAGOS
+
+ Directorio a leer: C:\PAGOS
+
+ Directorio a leer: C:\PAGOS
+
+ Directorio a leer: C:\PAGOS
+
+ Directorio a leer: C:\PAGOS
+
+ Directorio a leer: C:\PAGOS
+
+ Directorio a leer: C:\PAGOS
+
+ Directorio a leer: C:\PAGOS
+
+ Directorio a leer: C:\PAGOS
+
+ Directorio a leer: C:\PAGOS
+
+ Directorio a leer: C:\PAGOS
+
+ Directorio a leer: C:\PAGOS
+
+ Directorio a leer: C:\PAGOS
+
+ Directorio a leer: C:\PAGOS
+
+ Directorio a leer: C:\PAGOS
+
+ Directorio a leer: C:\PAGOS
+
+ Directorio a leer: C:\PAGOS
+
+ Directorio a leer: C:\PAGOS
+
+ Directorio a leer: C:\PAGOS

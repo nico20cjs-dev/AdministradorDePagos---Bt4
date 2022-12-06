@@ -25,52 +25,8 @@ namespace AdminPagosDLL.Controllers
 
         public ActionResult Index()
         {
-
-            ViewBag.data = "Hola Mundo!";
-
             return View();
         }
-
-        //private string ConvertDataTableToHTML(DataTable dt)
-        //{
-        //    string html = "<table>";
-        //    //add header row
-        //    html += "<tr>";
-        //    for (int i = 0; i < dt.Columns.Count; i++)
-        //        html += "<td>" + dt.Columns[i].ColumnName + "</td>";
-        //    html += "</tr>";
-        //    //add rows
-        //    for (int i = 0; i < dt.Rows.Count; i++)
-        //    {
-        //        html += "<tr>";
-        //        for (int j = 0; j < dt.Columns.Count; j++)
-        //            html += "<td>" + dt.Rows[i][j].ToString() + "</td>";
-        //        html += "</tr>";
-        //    }
-        //    html += "</table>";
-        //    return html;
-        //}
-
-        //private string ConvertListPagosToHTML(List<Pago> lstPagos)
-        //{
-        //    string html = "<tbody>";
-        //    //add header row
-        //    //html += "<tr>";
-        //    //for (int i = 0; i < lstPagos.Count; i++)
-        //    //{
-        //    //    html += "<td>" + "PAGO" + "</td>";
-        //    //}
-        //    //html += "</tr>";
-        //    //add rows
-        //    for (int i = 0; i < lstPagos.Count; i++)
-        //    {
-        //        html += "<tr>";
-        //        html += "    <td>" + lstPagos[i].Importe.ToString() + "</td>";
-        //        html += "</tr>";
-        //    }
-        //    html += "</tbody>";
-        //    return html;
-        //}
 
         public void GetCacheCotizacionHistoria()
         {
@@ -124,7 +80,7 @@ namespace AdminPagosDLL.Controllers
             {
                 var funcion = new Funciones();
                 var pagos = new List<Pago>();
-                pagos = funcion.InterpretarPDF();
+                pagos = funcion.CargarPagos();
                 if (funcion.Mensajes.Lista.Any())
                 {
                     Mensajes.Agregar(funcion.Mensajes.Lista);
@@ -134,6 +90,33 @@ namespace AdminPagosDLL.Controllers
                 LstPagos = pagos;
 
                 return Json(new { Mensajes, pagos }, JsonRequestBehavior.AllowGet);
+
+            }
+            catch (Exception ex)
+            {
+                //listaMensjes.Add( return Json(new { Mensajes = "Error: " + ex.Message });
+                return Json(new { Mensajes }, JsonRequestBehavior.AllowGet);
+            }
+        }
+
+        /// <summary>
+        /// Lee y procesa todos los Pdfs.
+        /// </summary>
+        /// <returns></returns>
+        public JsonResult ActualizarPDF()
+        {
+            Mensajes.Limpiar();
+            var retorno = Json(new { Mensajes }, JsonRequestBehavior.AllowGet);
+
+            try
+            {
+                //1. Borra la cache
+                LstPagos.Clear();
+
+                //2. Borro lo serializado
+                Funciones.BorrarSerializacion();
+
+                return LeerPDF();
 
             }
             catch (Exception ex)

@@ -31,7 +31,7 @@ var procesarMensajes = function (lstMsj, contenedor) {
     lstMsj.forEach(function (msj) {
         
         let classColor = '';
-        switch (msj.tipo) {
+        switch (msj.Tipo) {
             case 0: //Error
                 classColor = 'danger';
                 break;
@@ -59,7 +59,7 @@ var procesarMensajes = function (lstMsj, contenedor) {
                         <h6 class="m-0 font-weight-bold text-` + classColor + `">Basic Card Example</h6>
                     </div>
                     <div class="card-body">
-                        ` + msj.texto + `
+                        ` + msj.Texto + `
                     </div>
                 </div>
             </div>`
@@ -77,3 +77,17 @@ var limpiarMensajes = function (contenedor) {
     var objContenedor = convertContenedor(contenedor);
     objContenedor.children('.card-msj').remove()
 };
+
+function hourglass() {
+    var a;
+    a = document.getElementById("div1");
+    a.innerHTML = "&#xf251;";
+    setTimeout(function () {
+        a.innerHTML = "&#xf252;";
+    }, 1000);
+    setTimeout(function () {
+        a.innerHTML = "&#xf253;";
+    }, 2000);
+}
+hourglass();
+setInterval(hourglass, 3000);

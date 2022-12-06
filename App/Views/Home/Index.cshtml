@@ -26,7 +26,8 @@
     <!-- Custom styles for this page -->
     <link href="vendor/datatables/dataTables.bootstrap4.min.css" rel="stylesheet">
 
-
+    @*Icono animado*@
+    @*<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">*@
 
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.1/css/jquery.dataTables.css">
 
@@ -251,9 +252,13 @@
 
                         <div class="col-sm-6 botones">
 
-                            <button id="btnLeerPdf" type="button" class="btn btn-primary">
+                            <button id="btnLeerPdf" type="button" class="btn btn-primary ocultar">
                                 <i class="fa fa-eye" aria-hidden="true"></i>
                                 Leer Pagos
+                            </button>
+                            <button id="btnActualizarPdf" type="button" class="btn btn-primary">
+                                <i class="fa fa-eye" aria-hidden="true"></i>
+                                Actualizar Pagos
                             </button>
                             <button id="btnConsultarDolar" type="button" class="btn btn-info ocultar">
                                 Consultar DOLAR
@@ -277,6 +282,8 @@
 
                     </div>
 
+                    @*<div id="div1" class="fa"></div>*@
+
                     <div class="row">
 
                         <!-- DataTales Example -->
@@ -289,7 +296,7 @@
                                     <button type="button" class="btn btn-primary" title="Filtrar"><i class="fa fa-filter" aria-hidden="true"></i></button>
                                 </div>
                                 <div class="col-md-10" id="showHiddenCol">
-                                    Mostrar/ocultar:
+                                    <strong>Mostrar/ocultar:</strong>
                                     <a class="toggle-vis" data-column="0">Nro Transacción</a> -
                                     <a class="toggle-vis" data-column="1">Ente</a> -
                                     <a class="toggle-vis" data-column="2">Nº Cliente</a> -
@@ -297,8 +304,8 @@
                                     <a class="toggle-vis" data-column="4">Fecha Vto</a> -
                                     <a class="toggle-vis" data-column="5">Cuota</a> -
                                     <a class="toggle-vis" data-column="6">Pdf</a> -
-                                    <a class="toggle-vis" data-column="7">Tipo Comp</a>
-                                    <a class="toggle-vis" data-column="10">Importe U$S</a>
+                                    <a class="toggle-vis" data-column="7">Tipo Comp</a> -
+                                    <a class="toggle-vis" data-column="10">Importe U$S</a> -
                                     <a class="toggle-vis" data-column="11">Propiedad</a>
                                 </div>
 
@@ -591,8 +598,12 @@
         });
     };
 
-    var leerPdf = function () {
+    var leerPdf = function (action) {
         //$(this).hide();
+
+        if (action == undefined || action == '') {
+            action = "LeerPDF"
+        }
 
         reiniciarVariablesGrales();
 
@@ -600,7 +611,7 @@
         $('#dataTable').DataTable().rows().remove().draw(false);
 
         $.ajax({
-            url: 'Home/LeerPDF/',
+            url: 'Home/' + action +'/',
             success: function (respuesta) {
 
                 var lstMsj = respuesta.Mensajes.Lista;
@@ -699,6 +710,16 @@
         //    });
         //}, 1000);
     };
+
+    //INICIO: Asignacion de eventos a botones
+    $('#btnLeerPdf').click(function () {
+        leerPdf();
+    });
+
+    $('#btnActualizarPdf').click(function () {
+        leerPdf("ActualizarPDF");
+    });
+    //FIN: Asignacion de eventos a botones
 
     $(document).ready(function () {
 
@@ -802,10 +823,6 @@
 
         $('#btnTotalizarDolares').click(totalizarPagos);
 
-        $('#btnLeerPdf').click(function(){
-            leerPdf();
-        });
-
         /* Custom filtering function which will search data in column four between two values */
         $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
             var min = parseInt($('#min').val(), 10);
@@ -829,6 +846,10 @@
         // Event listener to the two range filtering inputs to redraw on input
         $('#min, #max').keyup(function () {
             table.draw();
+            totalizarPagos();
+        });
+
+        $('tfoot input').keyup(function () {
             totalizarPagos();
         });
 

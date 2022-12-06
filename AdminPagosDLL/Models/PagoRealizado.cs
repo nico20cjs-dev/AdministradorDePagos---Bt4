@@ -5,8 +5,10 @@ using System.Threading.Tasks;
 
 namespace AdminPagosDLL.Models
 {
+    [Serializable]
     public class PagoRealizado : Pago
     {
+        public PagoRealizado() { }
 
     }
 }

@@ -8,6 +8,8 @@ using iTextSharp.text.pdf.parser;
 using System.IO;
 using DatosDB;
 using System.Configuration;
+using System.Xml.Serialization;
+using System.Xml;
 
 namespace AdminPagosDLL.Core
 {
@@ -24,6 +26,30 @@ namespace AdminPagosDLL.Core
         
         }
 
+        public List<Pago> CargarPagos(string path = "")
+        {
+            #region Deserealización
+
+            try
+            {
+                //Si es la primera vez que se ejecuta el sitio se lee los pagos serializados
+                var pagos = DeSerializeObject<List<Pago>>();
+                if (pagos != null)
+                {
+                    return pagos;
+                }                
+            }
+            catch (Exception ex)
+            {
+
+            }
+
+            #endregion
+
+
+            return InterpretarPDF(path);
+        }
+
         public List<Pago> InterpretarPDF(string path = "")
         {
             int i = 0;
@@ -33,15 +59,39 @@ namespace AdminPagosDLL.Core
                 //DatosDB.Class1 obj = new DatosDB.Class1();
                 //var datos = obj.Leer();
 
+                var directorio = "";
                 string defecto = @"D:\Norma\000   PAGOS\";
                 string rutaConfig = ConfigurationManager.AppSettings["RutaDePagos"];
-                var directorio = !String.IsNullOrEmpty(rutaConfig) ? rutaConfig : defecto;
+                directorio = !String.IsNullOrEmpty(rutaConfig) ? rutaConfig : defecto;
 
-                //Validacion de directorio
-                if (!Directory.Exists(rutaConfig))
+                try
                 {
-                    directorio = defecto;
+                    var acces = Directory.GetAccessControl(rutaConfig);
                 }
+                catch (UnauthorizedAccessException)
+                {
+                    var msj = "La ruta parametrizada en el config (" + rutaConfig + ") existe pero no se tiene acceso a ella. Revise que la misma no este en una carpeta de un usuario del sistema.";
+                    Mensajes.Agregar(msj);
+                    Logger.Add(msj);
+                    return lstModelos;
+                }
+                catch
+                {
+                    var msj = "La ruta parametrizada en el config (" + rutaConfig + ") tuvo un error al intentar acceder, puede que la misma no exista.";
+                    Mensajes.Agregar(msj);
+                    Logger.Add(msj);
+                    return lstModelos;
+                }
+
+                ////Validacion de directorio
+                //Logger.Add("Existe rutaConfig?");
+                //if (!Directory.Exists(rutaConfig))
+                //{
+                //    Logger.Add("NO existe");
+                //    directorio = defecto;
+                //}
+
+                Logger.Add("\n Directorio a leer: " + directorio);
 
                 //Obtener todos los archivos, de extención .pdf en todos los subdirectorios de ...
                 var files = Directory.EnumerateFiles(directorio, "*.pdf", SearchOption.AllDirectories);
@@ -53,7 +103,7 @@ namespace AdminPagosDLL.Core
                 //ArchivosLeidos
                 int cantidadArchivosAux = cantidadArchivos;
                 string filesReaded = ConfigurationManager.AppSettings["ArchivosLeidos"];
-                if (!String.IsNullOrEmpty(filesReaded))
+                if (cantidadArchivos != 0 &&!String.IsNullOrEmpty(filesReaded))
                 {
                     if (int.TryParse(filesReaded, out int aux) && int.Parse(filesReaded) > 0)
                     {
@@ -283,7 +333,12 @@ namespace AdminPagosDLL.Core
                             //D:\Norma\000   PAGOS\18-08 - Arba NO SE.pdf
 
                             //Calcular valor en Dolares
-                            _pago.ImporteDolar = (decimal)CotizacionHistorica.GetCotizacionPorFecha(_pago.FechaPago);
+                            var valCotizacion = (decimal)CotizacionHistorica.GetCotizacionPorFecha(_pago.FechaPago);
+                            if (valCotizacion != 0)
+                            {
+                                _pago.ImporteDolar = decimal.Round(_pago.Importe / valCotizacion, 2);
+                            }                            
+                            //_pago.ImporteEnDolares = (decimal)CotizacionHistorica.GetCotizacionPorFecha(_pago.FechaPago);
 
                             _pago.Path = path;
 
@@ -346,7 +401,92 @@ namespace AdminPagosDLL.Core
                 Mensajes.Agregar(ex.Message + ". Indice: " + i + ". Archivo: " + path);
             }
 
+
+            SerializePagos(lstModelos);
+
             return lstModelos;
+        }
+
+        /// <summary>
+        /// Serializa los pagos.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="serializableObject"></param>
+        public void SerializePagos<T>(T serializableObject)
+        {
+            if (serializableObject == null) { return; }
+
+            try
+            {
+                XmlDocument xmlDocument = new XmlDocument();
+                XmlSerializer serializer = new XmlSerializer(serializableObject.GetType());
+                //XmlSerializer serializer = new XmlSerializer(typeof(Pago), new Type[] { typeof(Pago) });
+                using (MemoryStream stream = new MemoryStream())
+                {
+                    serializer.Serialize(stream, serializableObject);
+                    stream.Position = 0;
+                    xmlDocument.Load(stream);
+                    xmlDocument.Save(ConfigurationManager.AppSettings["PagosSerializados"]);
+                }
+            }
+            catch (Exception ex)
+            {
+                //Log exception here
+            }
+        }
+
+
+        /// <summary>
+        /// Deserializes an xml file into an object list
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public T DeSerializeObject<T>()
+        {
+            //if (string.IsNullOrEmpty(fileName)) { return default(T); }
+
+            T objectOut = default(T);
+            string fileName = ConfigurationManager.AppSettings["PagosSerializados"];
+
+            try
+            {
+                XmlDocument xmlDocument = new XmlDocument();
+                xmlDocument.Load(fileName);
+                string xmlString = xmlDocument.OuterXml;
+
+                using (StringReader read = new StringReader(xmlString))
+                {
+                    Type outType = typeof(T);
+
+                    XmlSerializer serializer = new XmlSerializer(outType);
+                    using (XmlReader reader = new XmlTextReader(read))
+                    {
+                        objectOut = (T)serializer.Deserialize(reader);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                //Log exception here
+            }
+
+            return objectOut;
+        }
+
+        public static void BorrarSerializacion()
+        {
+            try
+            {
+                string fileName = ConfigurationManager.AppSettings["PagosSerializados"];
+                if (File.Exists(fileName))
+                {
+                    File.Delete(fileName);
+                }
+            }
+            catch (Exception)
+            {
+
+            }
         }
 
         #endregion

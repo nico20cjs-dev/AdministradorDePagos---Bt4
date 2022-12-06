@@ -1,3 +1,9 @@
+Ente: Consorcio San martin
+N cliente: (cie) 
+Importe: $xxx
+Fecha pago: Fecha de la Transacción (ej: 22/11/2022)
+Fecha de Vto: dia 5 del mes de (Fecha de la Transacción) (ej: 05/11/2022)
+
 ** Fron **
  - centrar clumnas: vto, path, fecha pago, importe, etc
 

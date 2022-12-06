@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 namespace AdminPagosDLL.Models
 {
+    [Serializable]
     public class PagoEfectuado : Pago
     {
 
@@ -19,5 +20,6 @@ namespace AdminPagosDLL.Models
         public string Path { get; set; }
         public ETipoComprobante TipoComprobante { get; set; }
 
+        public PagoEfectuado() { }
     }
 }
