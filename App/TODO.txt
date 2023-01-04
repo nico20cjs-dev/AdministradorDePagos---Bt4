@@ -1,6 +1,6 @@
 Ente: Consorcio San martin
 N cliente: (cie) 
-Importe: $xxx
+Importe: $xxx,xx
 Fecha pago: Fecha de la Transacción (ej: 22/11/2022)
 Fecha de Vto: dia 5 del mes de (Fecha de la Transacción) (ej: 05/11/2022)
 
@@ -11,6 +11,8 @@ Fecha de Vto: dia 5 del mes de (Fecha de la Transacción) (ej: 05/11/2022)
  - 
 
 ** Funciones varias **
+ - Dolar/cotizacion: Antes del 2015 no se tiene cotizaciones, obtenerlas o cargarlas en un string constante
+ - Interpretar las expensas de Gesell, carpeta: C:\PAGOS\b - VILLA GESELL\V.G. EXPENSAS\2 0 1 7    al    2 0 2 2\2022 EXPENSAS
  - Filtros: Ente, periodos (igual, may, men, entre), importe (igual, may, men, entre), cuota
  - Filtro por casas, direcciones o personas 
    (agrupando todos los servicios de una casa, y todas las casas de una persona)
@@ -20,6 +22,8 @@ Fecha de Vto: dia 5 del mes de (Fecha de la Transacción) (ej: 05/11/2022)
  - Organizarlos pdf, en las carpetas correctas.
  - Identificar x bd los pdf duplicados.
  - Barra de progressbar al leer pdf
+ - Actualizar la Version de Bootstrap
+ - Responsive-mobile
 
 ** Optimizar **
  - No leer si contiene: "Detalle de Movimientos" (es del homeBanking), etc

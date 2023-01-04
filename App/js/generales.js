@@ -78,16 +78,19 @@ var limpiarMensajes = function (contenedor) {
     objContenedor.children('.card-msj').remove()
 };
 
+//Icono de reloj de arena - Le cambia el icono cada 1 seg
 function hourglass() {
     var a;
     a = document.getElementById("div1");
-    a.innerHTML = "&#xf251;";
-    setTimeout(function () {
-        a.innerHTML = "&#xf252;";
-    }, 1000);
-    setTimeout(function () {
-        a.innerHTML = "&#xf253;";
-    }, 2000);
+    if (a != null) {
+        a.innerHTML = "&#xf251;";
+        setTimeout(function () {
+            a.innerHTML = "&#xf252;";
+        }, 1000);
+        setTimeout(function () {
+            a.innerHTML = "&#xf253;";
+        }, 2000);
+    }
 }
 hourglass();
 setInterval(hourglass, 3000);

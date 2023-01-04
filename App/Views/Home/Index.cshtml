@@ -269,6 +269,9 @@
                             <button onclick="notEnable();" id="exportReport" class="d-none d-sm-inline-block btn btn-primary shadow-sm ocultar">
                                 <i class="fas fa-download fa-sm text-white-50"></i> Generar Reporte
                             </button>
+                            <button onclick="notEnable();" id="exportReport" class="d-none d-sm-inline-block btn btn-primary shadow-sm ocultar">
+                                <i class="fas fa-search fa-sm text-white-50"></i> Ver Pagos Duplicados
+                            </button>
                         </div>
 
                         @*<div class="col-xl-2 col-sm-3">
@@ -306,7 +309,7 @@
                                     <a class="toggle-vis" data-column="6">Pdf</a> -
                                     <a class="toggle-vis" data-column="7">Tipo Comp</a> -
                                     <a class="toggle-vis" data-column="10">Importe U$S</a> -
-                                    <a class="toggle-vis" data-column="11">Propiedad</a>
+                                    <a class="toggle-vis" data-column="11">Referencia</a>
                                 </div>
 
                             </div>
@@ -328,7 +331,7 @@
                                                 <th>Fecha Pago</th>
                                                 <th>Importe $</th>
                                                 <th>Importe U$S</th>
-                                                <th>Propiedad</th>
+                                                <th>Referencia</th>
                                             </tr>
                                         </thead>
                                         <tbody id="contenTabla">
@@ -350,7 +353,7 @@
                                                 <th>Fecha Pago</th>
                                                 <th>Importe $</th>
                                                 <th>Importe U$S</th>
-                                                <th>Propiedad</th>
+                                                <th>Referencia</th>
                                             </tr>
                                         </tfoot>
 
@@ -424,14 +427,47 @@
 
                         <label class="col-sm-1 col-form-label">desde</label>
                         <div class="col-sm-4">
-                            <input type="text" id="min" name="min" class="form-control" id="ImporteDesde" placeholder="$ 0">
+                            <input type="text" class="form-control" id="ImporteDesde" placeholder="$ 0">
                         </div>
                         <label class="col-sm-1 col-form-label">hasta</label>
                         <div class="col-sm-4">
-                            <input type="text" id="max" name="max" class="form-control" id="Importehasta" placeholder="$ 0">
+                            <input type="text" class="form-control" id="ImporteHasta" placeholder="$ 0">
                         </div>
                     </div>
-                    
+                    <div class="form-group row">
+                        <label class="col-sm-2 col-form-label"><strong>Referencia</strong></label>
+                        <div class="col-sm-5">
+                            <select class="custom-select" id="selectReference">
+                                <option value=""></option>
+                                <option value="0">-</option>
+                                <option value="1">Yrigoyen</option>
+                                <option value="2">Nico</option>
+                                <option value="3">Norma</option>
+                                <option value="4">Tia Raquel</option>
+                                <option value="5">Velez Sarsfield</option>
+                                <option value="6">Villa Gesell</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <label class="col-sm-2 col-form-label"><strong>Ente</strong></label>
+                        <div class="col-sm-5">
+                            <select class="custom-select" id="selectEnte">
+                                <option value=""></option>
+                                <option value="Arba">Arba</option>
+                                <option value="Aguas Bonaerenses">(Agua) Aguas Bonaerenses</option>
+                                <option value="Agua y Saneamientos Argentinos">(Agua) AySA</option>
+                                <option value="Edesur">(Luz) Edesur</option>
+                                <option value="Cevige">(Luz) Cevige</option>
+                                <option value="Metrogas">(Gas) Metrogas</option>
+                                <option value="Municipalidad de Lanus">(Municipal) Lanus</option>
+                                <option value="Municipalidad de Villa Gesell">(Municipal) Villa Gesell</option>
+                                <option value="Claro">(Telefonía) Claro</option>
+                                <option value="Movistar">(Telefonía) Movistar</option>
+                            </select>
+                        </div>
+                    </div>
+
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
@@ -653,7 +689,7 @@
                             aux_fechaPago, // "2018-08-09T09:53:23"
                             pago.Importe, // 377.1
                             pago.ImporteDolar, // 377.1
-                            fp.substr(3, 4),
+                            getStringReference(pago.Referencia),
                         ]).draw(true);
                     });
 
@@ -680,6 +716,37 @@
             }
         });
     };
+
+    function isNumeric(value) {
+        return /^-?\d+$/.test(value);
+    }
+
+    var getStringReference = function (nroRerence) {
+        var nro = 0;
+
+        if (typeof nroRerence === 'string' || nroRerence instanceof String) {
+            nro = parseInt(nroRerence);            
+        } else {
+            nro = nroRerence;
+        }
+
+        switch (nro) {
+            case 0:
+                return "-";
+            case 1:
+                return "Yrigoyen";
+            case 2:
+                return "Nico";
+            case 3:
+                return "Norma";
+            case 4:
+                return "Tia Raquel";
+            case 5:
+                return "Velez Sarsfield";
+            case 6:
+                return "Villa Gesell";
+        }
+    }
 
     var notEnable = function () {
         alert("Todavía no esta disponible esta funcionalidad");
@@ -799,8 +866,8 @@
             fixedHeader: true
         });
 
-        //Se ocultan columnas: NroTransaccion, Cliente, Nº CtaDebito, Tipo Comp, Propiedad
-        table.columns( [ 0, 2, 3, 5, 7, 11 ] ).visible( false, false );
+        //Se ocultan columnas: NroTransaccion, Cliente, Nº CtaDebito, Tipo Comp
+        table.columns( [ 0, 2, 3, 5, 7 ] ).visible( false, false );
         table.columns.adjust().draw(false); // adjust column sizing and redraw
 
         $('a.toggle-vis').on( 'click', function (e) {
@@ -825,26 +892,60 @@
 
         /* Custom filtering function which will search data in column four between two values */
         $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
-            var min = parseInt($('#min').val(), 10);
-            var max = parseInt($('#max').val(), 10);
 
-            var age = parseFloat(data[9]) || 0; // use data for the age column
+            var rowVisible = true;
 
+            //Condiciones de Importe Min y Max
+            var min = parseInt($('input#ImporteDesde').val(), 10);
+            var max = parseInt($('input#ImporteHasta').val(), 10);
+            var importe = parseFloat(data[9]) || 0; // use data for the importe column
             if (
                 (isNaN(min) && isNaN(max)) ||
-                (isNaN(min) && age <= max) ||
-                (min <= age && isNaN(max)) ||
-                (min <= age && age <= max)
+                (isNaN(min) && importe <= max) ||
+                (min <= importe && isNaN(max)) ||
+                (min <= importe && importe <= max)
             ) {
-                return true;
+                rowVisible = true;
+            } else {
+                return false;
             }
-            return false;
+
+            //Condición de cbo de Referencia
+            var selectReference = $('#selectReference').val();
+            if (selectReference != '') {
+                var importeDT = data[11]; // use data for the Referencia column
+                var txtReference = getStringReference(selectReference);
+
+                if (importeDT == txtReference) {
+                    rowVisible = true;
+                } else {
+                    return false;
+                }
+            }
+
+            //Condición de cbo de Ente
+            var selectEnte = $('#selectEnte').val().toLocaleLowerCase()
+            if (selectEnte != '') {
+                var enteDT = data[1].toLocaleLowerCase(); // use data for the Referencia column
+                if (enteDT.includes(selectEnte)) {
+                    rowVisible = true;
+                } else {
+                    return false;
+                }
+            }
+            
+            return rowVisible;
         });
 
         
 
-        // Event listener to the two range filtering inputs to redraw on input
-        $('#min, #max').keyup(function () {
+        // Redibujar la tabla filtrando cuando se escriba en los filtros
+        $('#ImporteDesde, #ImporteHasta').keyup(function () {
+            table.draw();
+            totalizarPagos();
+        });
+        // Redibujar la tabla filtrando cuando se seleccione los combos de los filtros
+        $('#selectReference,#selectEnte').change(function () {
             table.draw();
             totalizarPagos();
         });

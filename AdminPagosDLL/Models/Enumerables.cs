@@ -11,3 +11,14 @@ public enum ETipoMensaje
     Advertencia,
     Exito
 }
+
+public enum EReferencia
+{ 
+    Desconocido,
+    Yrigoyen,
+    Nico,
+    Norma,
+    TiaRaquel,
+    VelezSarsfield,
+    VillaGesell
+}
