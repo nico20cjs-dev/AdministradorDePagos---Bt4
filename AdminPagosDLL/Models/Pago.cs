@@ -2,9 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Xml.Serialization;
 
 namespace AdminPagosDLL.Models
 {
+    [XmlInclude(typeof(PagoEfectuado))]
+    [XmlInclude(typeof(PagoRealizado))]
+    [Serializable]
     public class Pago
     {
 
@@ -30,7 +34,10 @@ namespace AdminPagosDLL.Models
 
         public decimal ImporteDolar { get; set; }
 
+        public decimal ImporteEnDolares { get; set; }
+
         #endregion
 
+        public Pago() { }
     }
 }

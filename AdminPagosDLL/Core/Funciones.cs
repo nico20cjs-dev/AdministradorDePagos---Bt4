@@ -7,6 +7,8 @@ using iTextSharp.text.pdf;
 using iTextSharp.text.pdf.parser;
 using System.IO;
 using System.Configuration;
+using System.Xml.Serialization;
+using System.Xml;
 
 namespace AdminPagosDLL.Core
 {
@@ -23,20 +25,72 @@ namespace AdminPagosDLL.Core
         
         }
 
+        public List<Pago> CargarPagos(string path = "")
+        {
+            #region Deserealización
+
+            try
+            {
+                //Si es la primera vez que se ejecuta el sitio se lee los pagos serializados
+                var pagos = DeSerializeObject<List<Pago>>();
+                if (pagos != null)
+                {
+                    return pagos;
+                }                
+            }
+            catch (Exception ex)
+            {
+
+            }
+
+            #endregion
+
+
+            return InterpretarPDF(path);
+        }
+
         public List<Pago> InterpretarPDF(string path = "")
         {
             int i = 0;
             
             try
             {
-                string rutaConfig = ConfigurationManager.AppSettings["RutaDePagos"];
-                var directorio = !String.IsNullOrEmpty(rutaConfig) ? rutaConfig : @"D:\Norma\000   PAGOS\";
+                //DatosDB.Class1 obj = new DatosDB.Class1();
+                //var datos = obj.Leer();
 
-                //Validacion de directorio
-                if (!Directory.Exists(rutaConfig))
+                var directorio = "";
+                string defecto = @"D:\Norma\000   PAGOS\";
+                string rutaConfig = ConfigurationManager.AppSettings["RutaDePagos"];
+                directorio = !String.IsNullOrEmpty(rutaConfig) ? rutaConfig : defecto;
+
+                try
                 {
-                    directorio = @"D:\Norma\000   PAGOS\";
+                    var acces = Directory.GetAccessControl(rutaConfig);
                 }
+                catch (UnauthorizedAccessException)
+                {
+                    var msj = "La ruta parametrizada en el config (" + rutaConfig + ") existe pero no se tiene acceso a ella. Revise que la misma no este en una carpeta de un usuario del sistema.";
+                    Mensajes.Agregar(msj);
+                    Logger.Add(msj);
+                    return lstModelos;
+                }
+                catch
+                {
+                    var msj = "La ruta parametrizada en el config (" + rutaConfig + ") tuvo un error al intentar acceder, puede que la misma no exista.";
+                    Mensajes.Agregar(msj);
+                    Logger.Add(msj);
+                    return lstModelos;
+                }
+
+                ////Validacion de directorio
+                //Logger.Add("Existe rutaConfig?");
+                //if (!Directory.Exists(rutaConfig))
+                //{
+                //    Logger.Add("NO existe");
+                //    directorio = defecto;
+                //}
+
+                Logger.Add("\n Directorio a leer: " + directorio);
 
                 //Obtener todos los archivos, de extención .pdf en todos los subdirectorios de ...
                 var files = Directory.EnumerateFiles(directorio, "*.pdf", SearchOption.AllDirectories);
@@ -45,10 +99,25 @@ namespace AdminPagosDLL.Core
                 PdfReader reader = null;
                 var format = new Formatos();
 
-                for (i = 0; i < cantidadArchivos; i++)
+                //ArchivosLeidos
+                int cantidadArchivosAux = cantidadArchivos;
+                string filesReaded = ConfigurationManager.AppSettings["ArchivosLeidos"];
+                if (cantidadArchivos != 0 &&!String.IsNullOrEmpty(filesReaded))
+                {
+                    if (int.TryParse(filesReaded, out int aux) && int.Parse(filesReaded) > 0)
+                    {
+                        cantidadArchivosAux = int.Parse(filesReaded);
+                    }
+                }
+
+                for (i = 0; i < cantidadArchivosAux; i++)
                 {
                     path = lstArchivos[i];
 
+                    //if (i == 120 || path.Contains("2020-06-22 CEVIGE VTO"))
+                    //{
+                    //    break;
+                    //}
                     if (i == 100 || path.Contains("2020-06-22 CEVIGE VTO"))
                     {
                         break;
@@ -155,7 +224,7 @@ namespace AdminPagosDLL.Core
                                 string clave = lineaFormato[0];
                                 string valor = "";
                                 valor = lineaFormato.Count() > 1 ? lineaFormato[1] : "";
-
+                                valor = valor.Trim();
 
                                 switch (clave)
                                 {
@@ -202,12 +271,31 @@ namespace AdminPagosDLL.Core
 
                                         _pago.NroCliente = valor;
 
-                                        //Si es comprobante Simple
-                                        if (_pago.NroCliente.Equals("101122140030") && _pago.Ente.Equals("Buenos Aires- Municipalidad de"))
-                                        {
-                                            _pago.Ente = "Buenos Aires- Municipalidad de Villa Gesell";
+                                        if (!_pago.Ente.Contains("Lanus") &&
+                                            _pago.Ente.Contains("Buenos Aires- Municipalidad de"))
+                                        { 
+                                        
                                         }
 
+                                        //Si es comprobante Simple se completa el nombre del Ente
+                                        if (_pago.Ente.Equals("Buenos Aires- Municipalidad de"))
+                                        {
+                                            if (_pago.NroCliente.Equals("0000000000104243024")) // muni-Yrigoyen
+                                            {
+                                                _pago.Ente += " Lanus";
+                                            }
+                                            if (_pago.NroCliente.Equals("0000000000445015012")) //muni-raquel
+                                            {
+                                                _pago.Ente += " Lanus";
+                                            }
+                                            if (_pago.NroCliente.Equals("101122140030"))
+                                            {
+                                                _pago.Ente += " Villa Gesell";
+                                            }
+                                        }
+                                        break;
+                                    case "Código/Usuario":
+                                        _pago.NroCliente = valor;
                                         break;
                                     case "Nro de cuenta débito":
                                         _pago.NroCtaDebito = valor;
@@ -230,14 +318,15 @@ namespace AdminPagosDLL.Core
                                     case "abonado":
 
 
-                                        // Buenos Aires - Municipalidad de Lanus
+                                        //Buenos Aires - Municipalidad de Lanus
+                                        //Buenos Aires - Municipalidad de Villa Gesell
                                         if (lineaAnterior.Contains("Nombre del ente"))
                                         {
-                                            var enteAux = lineaAnterior.Replace("Nombre del ente", "").Trim() + valor;
+                                            var enteAux = lineaAnterior.Replace("Nombre del ente", "").Trim() + " " + valor;
 
                                             enteAux = enteAux.Replace("Códigos de Pago que comiencen con 2", "").Trim();
 
-                                            _pago.Ente = enteAux;
+                                            _pago.Ente = enteAux.Trim();
                                         }
                                         else
                                         {
@@ -264,10 +353,85 @@ namespace AdminPagosDLL.Core
                                 lineaAnterior = line;
                             }
 
+                            //Setea la referencia, ej "Tia Raquel"; "Gesell"
+                            if (!String.IsNullOrEmpty(_pago.NroCliente))
+                            {
+                                switch (_pago.NroCliente.Trim())
+                                {
+                                    //Pendientes de saber de quien son
+                                    case "20902705060": //Claro
+                                    case "08620902705060": //Claro
+                                    case "08620382717056": //Claro
+                                    case "00904777178": //Edesur                                        
+                                        break;
+
+                                    //NICO
+                                    case "0001280444":
+                                    case "00901280444":
+                                        _pago.Referencia = EReferencia.Nico;
+                                        break;
+
+                                    //NORMA
+                                    case "08620199489345": //Claro-Norma
+                                    case "20199489345": //Claro-Norma
+                                        _pago.Referencia = EReferencia.Norma;
+                                        break;
+
+                                    //VELEZ
+                                    case "00100250089457": //Arba-Velez
+                                    case "3860000616796": //Aysa-Velez
+                                    case "0001280445": //Edesur-Velez
+                                    case "00901280445": //Edesur-Velez
+                                    case "29820144117001": //Metrogas-Velez (antes que se saque en el '18)
+                                    case "0000000000402052000": //Municimal-Velez
+                                        _pago.Referencia = EReferencia.VelezSarsfield;
+                                        break;
+
+                                    //YRIGOYEN
+                                    case "00100251361487": //Arba-Yrigoyen
+                                    case "00904022218": //Edesur-Yrigoyen
+                                    case "0004022218": //Edesur-Yrigoyen
+                                    case "00904675863": //Edesur-Yrigoyen
+                                    case "030006245390": //Metrogas-Yrigoyen
+                                    case "29830006245390": //Metrogas-Yrigoyen
+                                    case "29820144118800": //Metrogas-Yrigoyen
+                                    case "20144118800": //Metrogas-Yrigoyen
+                                    case "0000000000104243024": //Municimal-Yrigoyen
+                                        _pago.Referencia = EReferencia.Yrigoyen;
+                                        break;
+
+                                    //TIA RAQUEL
+                                    case "00903846727": //Edesur-TiaRaquel
+                                    case "0003846727": //Edesur-TiaRaquel
+                                    case "030003392507": //Metrogas-TiaRaquel
+                                    case "0290184409": //Movistar-TiaRaquel
+                                    case "0000000000445015012": //Municimal-TiaRaquel
+                                        _pago.Referencia = EReferencia.TiaRaquel;
+                                        break;
+
+                                    //GESELL
+                                    case "0001392230": //AguasBonaerences-Gesell
+                                    case "00101250019153": //Arba-Gesell
+                                    case "01250019153": //Arba-Gesell
+                                    case "0005820": //Cevige-Gesell
+                                    case "101122140030": //Municipal-Gesell
+                                    case "901043090065": //Municipal-Gesell
+                                        _pago.Referencia = EReferencia.VillaGesell;
+                                        break;
+                                    default:
+                                        break;
+                                }
+                            }
+                            
                             //D:\Norma\000   PAGOS\18-08 - Arba NO SE.pdf
 
                             //Calcular valor en Dolares
-                            _pago.ImporteDolar = (decimal)CotizacionHistorica.GetCotizacionPorFecha(_pago.FechaPago);
+                            var valCotizacion = (decimal)CotizacionHistorica.GetCotizacionPorFecha(_pago.FechaPago);
+                            if (valCotizacion != 0)
+                            {
+                                _pago.ImporteDolar = decimal.Round(_pago.Importe / valCotizacion, 2);
+                            }                            
+                            
 
                             _pago.Path = path;
 
@@ -329,7 +493,92 @@ namespace AdminPagosDLL.Core
                 Mensajes.Agregar(ex.Message + ". Indice: " + i + ". Archivo: " + path);
             }
 
+
+            SerializePagos(lstModelos);
+
             return lstModelos;
+        }
+
+        /// <summary>
+        /// Serializa los pagos.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="serializableObject"></param>
+        public void SerializePagos<T>(T serializableObject)
+        {
+            if (serializableObject == null) { return; }
+
+            try
+            {
+                XmlDocument xmlDocument = new XmlDocument();
+                XmlSerializer serializer = new XmlSerializer(serializableObject.GetType());
+                //XmlSerializer serializer = new XmlSerializer(typeof(Pago), new Type[] { typeof(Pago) });
+                using (MemoryStream stream = new MemoryStream())
+                {
+                    serializer.Serialize(stream, serializableObject);
+                    stream.Position = 0;
+                    xmlDocument.Load(stream);
+                    xmlDocument.Save(ConfigurationManager.AppSettings["PagosSerializados"]);
+                }
+            }
+            catch (Exception ex)
+            {
+                //Log exception here
+            }
+        }
+
+
+        /// <summary>
+        /// Deserializes an xml file into an object list
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public T DeSerializeObject<T>()
+        {
+            //if (string.IsNullOrEmpty(fileName)) { return default(T); }
+
+            T objectOut = default(T);
+            string fileName = ConfigurationManager.AppSettings["PagosSerializados"];
+
+            try
+            {
+                XmlDocument xmlDocument = new XmlDocument();
+                xmlDocument.Load(fileName);
+                string xmlString = xmlDocument.OuterXml;
+
+                using (StringReader read = new StringReader(xmlString))
+                {
+                    Type outType = typeof(T);
+
+                    XmlSerializer serializer = new XmlSerializer(outType);
+                    using (XmlReader reader = new XmlTextReader(read))
+                    {
+                        objectOut = (T)serializer.Deserialize(reader);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                //Log exception here
+            }
+
+            return objectOut;
+        }
+
+        public static void BorrarSerializacion()
+        {
+            try
+            {
+                string fileName = ConfigurationManager.AppSettings["PagosSerializados"];
+                if (File.Exists(fileName))
+                {
+                    File.Delete(fileName);
+                }
+            }
+            catch (Exception)
+            {
+
+            }
         }
 
         #endregion

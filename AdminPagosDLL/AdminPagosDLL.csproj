@@ -52,6 +52,7 @@
     <Compile Include="Core\FMensaje.cs" />
     <Compile Include="Core\Formatos.cs" />
     <Compile Include="Core\Funciones.cs" />
+    <Compile Include="Core\Logger.cs" />
     <Compile Include="Models\Dolar.cs" />
     <Compile Include="Models\Enumerables.cs" />
     <Compile Include="Models\ErrorViewModel.cs" />
