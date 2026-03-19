@@ -71,3 +71,9 @@ Existe rutaConfig?
  Directorio a leer: C:\PAGOS
 
  Directorio a leer: C:\PAGOS
+La ruta parametrizada en el config () tuvo un error al intentar acceder, puede que la misma no exista.
+La ruta parametrizada en el config () tuvo un error al intentar acceder, puede que la misma no exista.
+La ruta parametrizada en el config () tuvo un error al intentar acceder, puede que la misma no exista.
+La ruta parametrizada en el config () tuvo un error al intentar acceder, puede que la misma no exista.
+
+ Directorio a leer: D:\Norma\000   PAGOS\

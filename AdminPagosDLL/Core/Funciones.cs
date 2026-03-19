@@ -65,18 +65,18 @@ namespace AdminPagosDLL.Core
 
                 try
                 {
-                    var acces = Directory.GetAccessControl(rutaConfig);
+                    var acces = Directory.GetAccessControl(directorio);
                 }
                 catch (UnauthorizedAccessException)
                 {
-                    var msj = "La ruta parametrizada en el config (" + rutaConfig + ") existe pero no se tiene acceso a ella. Revise que la misma no este en una carpeta de un usuario del sistema.";
+                    var msj = "La ruta parametrizada en el config (" + directorio + ") existe pero no se tiene acceso a ella. Revise que la misma no este en una carpeta de un usuario del sistema.";
                     Mensajes.Agregar(msj);
                     Logger.Add(msj);
                     return lstModelos;
                 }
                 catch
                 {
-                    var msj = "La ruta parametrizada en el config (" + rutaConfig + ") tuvo un error al intentar acceder, puede que la misma no exista.";
+                    var msj = "La ruta parametrizada en el config (" + directorio + ") tuvo un error al intentar acceder, puede que la misma no exista.";
                     Mensajes.Agregar(msj);
                     Logger.Add(msj);
                     return lstModelos;
