@@ -24,7 +24,7 @@ namespace AdminPagosDLL.Controllers
         public ActionResult Index()
         {
 
-            ViewBag.data = "Hola Mundo!";
+            //ViewBag.data = "Hola Mundo!";
 
             return View();
         }

@@ -1789,15 +1789,11 @@
     <Content Include="Views\_ViewStart.cshtml" />
     <Content Include="Views\Shared\Error.cshtml" />
     <Content Include="Views\Shared\_Layout.cshtml" />
-    <Content Include="Views\Home\About.cshtml" />
-    <Content Include="Views\Home\Contact.cshtml" />
     <Content Include="Views\Home\Index.cshtml" />
     <Content Include="Views\Home\AbmPago.cshtml" />
-    <Content Include="Views\Home\Index1.cshtml" />
     <Content Include="Views\Home\Index2.cshtml" />
     <Content Include="Views\Home\Privacy.cshtml" />
     <Content Include="Views\Home\Tabla.cshtml" />
-    <Content Include="Views\Home\tables.cshtml" />
     <Content Include="Views\Shared\_CookieConsentPartial.cshtml" />
     <Content Include="Views\Shared\_ValidationScriptsPartial.cshtml" />
     <Content Include="Views\_ViewImports.cshtml" />
@@ -1992,10 +1988,6 @@
     <ProjectReference Include="..\AdminPagosDLL\AdminPagosDLL.csproj">
       <Project>{b296395b-3be4-438a-886c-0f7d36332761}</Project>
       <Name>AdminPagosDLL</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\DatosDB\DatosDB.csproj">
-      <Project>{d3266a62-3a66-4270-8d3d-cb0db4c0e990}</Project>
-      <Name>DatosDB</Name>
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup>

@@ -6,7 +6,6 @@ using AdminPagosDLL.Models;
 using iTextSharp.text.pdf;
 using iTextSharp.text.pdf.parser;
 using System.IO;
-using DatosDB;
 using System.Configuration;
 
 namespace AdminPagosDLL.Core
@@ -30,9 +29,6 @@ namespace AdminPagosDLL.Core
             
             try
             {
-                //DatosDB.Class1 obj = new DatosDB.Class1();
-                //var datos = obj.Leer();
-
                 string rutaConfig = ConfigurationManager.AppSettings["RutaDePagos"];
                 var directorio = !String.IsNullOrEmpty(rutaConfig) ? rutaConfig : @"D:\Norma\000   PAGOS\";
 
@@ -53,7 +49,7 @@ namespace AdminPagosDLL.Core
                 {
                     path = lstArchivos[i];
 
-                    if (i == 120 || path.Contains("2020-06-22 CEVIGE VTO"))
+                    if (i == 100 || path.Contains("2020-06-22 CEVIGE VTO"))
                     {
                         break;
                     }
@@ -71,7 +67,7 @@ namespace AdminPagosDLL.Core
                         }
                         else
                         {
-                            //InvalidPdfException
+                            //TODO: en este caso se debe lanzar una "InvalidPdfException"
                         }
 
                         continue;
@@ -325,7 +321,6 @@ namespace AdminPagosDLL.Core
 
                     reader.Close();
                 }
-
 
             }
             catch (Exception ex)
