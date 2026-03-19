@@ -7,7 +7,6 @@ using System.Xml.Serialization;
 namespace AdminPagosDLL.Models
 {
     [XmlInclude(typeof(PagoEfectuado))]
-    [XmlInclude(typeof(PagoRealizado))]
     [Serializable]
     public class Pago
     {

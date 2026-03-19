@@ -5,41 +5,64 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-//using Microsoft.AspNetCore.Mvc;
 using AdminPagosDLL.Models;
 using AdminPagosDLL.Core;
-using iTextSharp.text.pdf;
-using iTextSharp.text.pdf.parser;
 using System.IO;
 using System.Data;
 using System.Web.UI;
+using System.Net;
 
 namespace AdminPagosDLL.Controllers
 {
     public class HomeController : Controller
     {
         public FMensaje Mensajes = new FMensaje();
+        private static readonly object CotizacionHistoricaLock = new object();
 
         public static string TxtCotizacionHistoria = "";
         public static List<Pago> LstPagos = new List<Pago>();
 
         public ActionResult Index()
         {
+            InicializarCotizacionHistorica();
 
             return View();
         }
 
-        public void GetCacheCotizacionHistoria()
+        private void InicializarCotizacionHistorica()
         {
             Mensajes.Limpiar();
-            var retorno = Json(new { Mensajes }, JsonRequestBehavior.AllowGet);
+
+            if (!String.IsNullOrWhiteSpace(TxtCotizacionHistoria))
+            {
+                CotizacionHistorica.CargarCotizacion(TxtCotizacionHistoria);
+                return;
+            }
+
             try
             {
-                if (String.IsNullOrEmpty(TxtCotizacionHistoria))
+                lock (CotizacionHistoricaLock)
                 {
-                    using (var client = new System.Net.WebClient())
+                    if (!String.IsNullOrWhiteSpace(TxtCotizacionHistoria))
                     {
-                        TxtCotizacionHistoria = client.DownloadString("https://apis.datos.gob.ar/series/api/series/?ids=168.1_T_CAMBIOR_D_0_0_26&limit=5000&format=json");
+                        CotizacionHistorica.CargarCotizacion(TxtCotizacionHistoria);
+                        return;
+                    }
+
+                    var cachePath = Server.MapPath("~/App_Data/cotizacionesHistoricas.json");
+                    if (System.IO.File.Exists(cachePath))
+                    {
+                        TxtCotizacionHistoria = System.IO.File.ReadAllText(cachePath);
+                    }
+
+                    if (String.IsNullOrWhiteSpace(TxtCotizacionHistoria))
+                    {
+                        using (var client = new WebClient())
+                        {
+                            TxtCotizacionHistoria = client.DownloadString("https://apis.datos.gob.ar/series/api/series/?ids=168.1_T_CAMBIOR_D_0_0_26&limit=5000&format=json");
+                        }
+
+                        System.IO.File.WriteAllText(cachePath, TxtCotizacionHistoria);
                     }
 
                     CotizacionHistorica.CargarCotizacion(TxtCotizacionHistoria);
@@ -49,7 +72,6 @@ namespace AdminPagosDLL.Controllers
             catch (Exception ex)
             {
                 Mensajes.Agregar(ex.Message);
-                //return retorno;
             }
         }
 
@@ -58,11 +80,53 @@ namespace AdminPagosDLL.Controllers
         /// </summary>
         /// <param name="path">Ruta de ubicación del pdf.</param>
         /// <returns></returns>
-        public FileResult GetReport(string path)
+        public ActionResult GetReport(string path)
         {
-            string ReportURL = path;
-            byte[] FileBytes = System.IO.File.ReadAllBytes(ReportURL);
-            return File(FileBytes, "application/pdf");
+            if (String.IsNullOrWhiteSpace(path))
+            {
+                return new HttpStatusCodeResult(HttpStatusCode.BadRequest, "Ruta inválida.");
+            }
+
+            var decodedPath = Server.UrlDecode(path)?.Trim();
+            if (String.IsNullOrWhiteSpace(decodedPath))
+            {
+                return new HttpStatusCodeResult(HttpStatusCode.BadRequest, "Ruta inválida.");
+            }
+
+            string reportPath;
+            try
+            {
+                reportPath = System.IO.Path.GetFullPath(decodedPath);
+            }
+            catch
+            {
+                return new HttpStatusCodeResult(HttpStatusCode.BadRequest, "Ruta inválida.");
+            }
+
+            bool esPdf = reportPath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
+            if (!esPdf)
+            {
+                return new HttpStatusCodeResult(HttpStatusCode.BadRequest, "El archivo solicitado no es PDF.");
+            }
+
+            bool rutaHabilitada = LstPagos
+                .OfType<PagoEfectuado>()
+                .Any(p =>
+                    !String.IsNullOrWhiteSpace(p.Path) &&
+                    String.Equals(System.IO.Path.GetFullPath(p.Path), reportPath, StringComparison.OrdinalIgnoreCase));
+
+            if (!rutaHabilitada)
+            {
+                return new HttpStatusCodeResult(HttpStatusCode.Forbidden, "Archivo no autorizado.");
+            }
+
+            if (!System.IO.File.Exists(reportPath))
+            {
+                return HttpNotFound("No se encontró el comprobante solicitado.");
+            }
+
+            byte[] fileBytes = System.IO.File.ReadAllBytes(reportPath);
+            return File(fileBytes, "application/pdf");
         }
 
         /// <summary>
@@ -125,25 +189,6 @@ namespace AdminPagosDLL.Controllers
                 //listaMensjes.Add( return Json(new { Mensajes = "Error: " + ex.Message });
                 return Json(new { Mensajes }, JsonRequestBehavior.AllowGet);
             }
-        }
-
-        public ActionResult About()
-        {
-            ViewData["Message"] = "Your application description page.";
-
-            return View();
-        }
-
-        public ActionResult Contact()
-        {
-            ViewData["Message"] = "Your contact page.";
-
-            return View();
-        }
-
-        public ActionResult Privacy()
-        {
-            return View();
         }
 
         //[ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

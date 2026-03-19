@@ -77,3 +77,19 @@ La ruta parametrizada en el config () tuvo un error al intentar acceder, puede q
 La ruta parametrizada en el config () tuvo un error al intentar acceder, puede que la misma no exista.
 
  Directorio a leer: D:\Norma\000   PAGOS\
+
+ Directorio a leer: D:\Norma\000   PAGOS\
+
+ Directorio a leer: D:\Norma\000   PAGOS\
+
+ Directorio a leer: D:\Norma\000   PAGOS\
+
+ Directorio a leer: D:\Norma\000   PAGOS\
+
+ Directorio a leer: D:\Norma\000   PAGOS\
+
+ Directorio a leer: D:\Norma\000   PAGOS\
+
+ Directorio a leer: D:\Norma\000   PAGOS\
+
+ Directorio a leer: D:\Norma\000   PAGOS\

@@ -15,10 +15,7 @@ var convertContenedor = function (contenedor) {
     if (contenedor == undefined || contenedor == '') {
         objContenedor = $('#contentMensajes');
     } else {
-
-        if (contenedor == '') {
-            objContenedor = $(contenedor);
-        }
+        objContenedor = $(contenedor);
     }
 
     return objContenedor;
@@ -30,39 +27,38 @@ var procesarMensajes = function (lstMsj, contenedor) {
 
     lstMsj.forEach(function (msj) {
         
-        let classColor = '';
+        let classColor = 'info';
+        let title = 'Informacion';
         switch (msj.Tipo) {
             case 0: //Error
-                classColor = 'danger';
+                classColor = 'error';
+                title = 'Error';
                 break;
             case 1: //Informacion
-                classColor = 'success';
+                classColor = 'info';
+                title = 'Informacion';
                 break;
             case 2: //Advertencia
-                classColor = 'success';
+                classColor = 'warning';
+                title = 'Advertencia';
                 break;
             case 3: //Exito
                 classColor = 'success';                
+                title = 'Exito';
                 break;
             case 4: //Advertencia
-                classColor = 'primary';
+                classColor = 'warning';
+                title = 'Advertencia';
                 break;
             default:
                 break;
         }
 
-        let panelMsj = 
-            `<div class="col-lg-12 card-msj">
-                <!-- Basic Card Example -->
-                <div class="card shadow mb-4">
-                    <div class="card-header py-3">
-                        <h6 class="m-0 font-weight-bold text-` + classColor + `">Basic Card Example</h6>
-                    </div>
-                    <div class="card-body">
-                        ` + msj.Texto + `
-                    </div>
-                </div>
-            </div>`
+        let panelMsj =
+            `<article class="card-msj msg-card msg-` + classColor + `">
+                <h4>` + title + `</h4>
+                <p>` + msj.Texto + `</p>
+            </article>`;
 
         objContenedor.append(panelMsj);
 

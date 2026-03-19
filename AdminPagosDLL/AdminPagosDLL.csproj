@@ -53,13 +53,11 @@
     <Compile Include="Core\Formatos.cs" />
     <Compile Include="Core\Funciones.cs" />
     <Compile Include="Core\Logger.cs" />
-    <Compile Include="Models\Dolar.cs" />
     <Compile Include="Models\Enumerables.cs" />
     <Compile Include="Models\ErrorViewModel.cs" />
     <Compile Include="Models\Mensaje.cs" />
     <Compile Include="Models\Pago.cs" />
     <Compile Include="Models\PagoEfectuado.cs" />
-    <Compile Include="Models\PagoRealizado.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

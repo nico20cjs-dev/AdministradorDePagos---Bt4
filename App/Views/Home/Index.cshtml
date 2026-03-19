@@ -1,960 +1,426 @@
-﻿
-
+﻿@{ Layout = null; }
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="es" data-theme="light">
 <head>
-
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="">
-    <meta name="author" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Panel para gestionar y analizar comprobantes de pago de forma rapida y segura.">
+    <meta name="robots" content="index,follow">
+    <meta name="theme-color" content="#0f172a">
+    <title>Administrador de Pagos</title>
 
-    <title>SB Admin 2 - Dashboard</title>
-
-    <!-- Custom fonts for this template-->
-    <link href="vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
-    <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet">
-
-    <!-- Custom styles for this template-->
-    <link href="css/sb-admin-2.min.css" rel="stylesheet">
-
-    <!-- Clase personalisada-->
-    <link href="css/custom.css" rel="stylesheet">
-
-    <!-- Custom styles for this page -->
-    <link href="vendor/datatables/dataTables.bootstrap4.min.css" rel="stylesheet">
-
-    @*Icono animado*@
-    @*<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">*@
-
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.1/css/jquery.dataTables.css">
-
-    @*<script type="text/javascript" src="Scripts/jquery-3.5.1.min.js"></script>*@
-    <script type="text/javascript" src="https://code.jquery.com/jquery-3.6.1.min.js"></script>
-
-    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.13.1/js/jquery.dataTables.min.js"></script>
-    <script type="text/javascript" src="vendor/datatables/dataTables.fixedHeader.min.js"></script>
+    @Styles.Render("~/bundles/appcss")
 </head>
+<body>
+    <main class="app-shell">
+        <header class="topbar" aria-label="Encabezado principal">
+            <div>
+                <h1 class="app-title">Administrador de Pagos</h1>
+                <p class="app-subtitle">Control centralizado de comprobantes, filtros y totales.</p>
+            </div>
+            <div class="topbar-actions">
+                <button id="themeToggle" class="btn btn-ghost" type="button" aria-pressed="false">Modo oscuro</button>
+                <button id="btnActualizarPdf" class="btn btn-primary" type="button">Actualizar pagos</button>
+            </div>
+        </header>
 
-<body id="page-top">
+        <section class="stats-grid" aria-label="Resumenes">
+            <article class="stat-card">
+                <p class="stat-label">Total en Pesos</p>
+                <p id="pesosCalculados" class="stat-value">$ 0,00</p>
+            </article>
+            <article class="stat-card">
+                <p class="stat-label">Total en Dolares</p>
+                <p id="dolaresCalculados" class="stat-value">USD 0.00</p>
+            </article>
+        </section>
 
-    <!-- Page Wrapper -->
-    <div id="wrapper">
+        <section class="toolbar" aria-label="Herramientas de vista">
+            <div class="toolbar-left">
+                <button id="btnToggleFiltros" class="btn btn-secondary" type="button" aria-expanded="false" aria-controls="filtersPanel">Mostrar filtros</button>
+                <span id="loadState" class="load-state" aria-live="polite">Listo</span>
+            </div>
+            <div id="div1" class="hourglass" aria-hidden="true"></div>
+        </section>
 
-        <!-- Sidebar -->
-        <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion toggled ocultar" id="accordionSidebar">
+        <section id="contentMensajes" class="message-grid" aria-live="polite"></section>
 
-            <!-- Sidebar - Brand -->
-            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="index.html">
-                <div class="sidebar-brand-icon rotate-n-15">
-                    <i class="fas fa-laugh-wink"></i>
-                </div>
-                <div class="sidebar-brand-text mx-3">SB Admin <sup>2</sup></div>
-            </a>
+        <section id="filtersPanel" class="filters-panel is-collapsed" aria-label="Filtros de busqueda">
+            <div class="filters-grid">
+                <label class="field">
+                    <span>Importe desde</span>
+                    <input type="number" id="ImporteDesde" placeholder="0" min="0" step="0.01">
+                </label>
+                <label class="field">
+                    <span>Importe hasta</span>
+                    <input type="number" id="ImporteHasta" placeholder="0" min="0" step="0.01">
+                </label>
+                <label class="field">
+                    <span>Referencia</span>
+                    <select id="selectReference">
+                        <option value=""></option>
+                        <option value="0">-</option>
+                        <option value="1">Yrigoyen</option>
+                        <option value="2">Nico</option>
+                        <option value="3">Norma</option>
+                        <option value="4">Tia Raquel</option>
+                        <option value="5">Velez Sarsfield</option>
+                        <option value="6">Villa Gesell</option>
+                    </select>
+                </label>
+                <label class="field field-wide">
+                    <span>Ente</span>
+                    <select id="selectEnte">
+                        <option value=""></option>
+                        <option value="Arba">Arba</option>
+                        <option value="Aguas Bonaerenses">(Agua) Aguas Bonaerenses</option>
+                        <option value="Agua y Saneamientos Argentinos">(Agua) AySA</option>
+                        <option value="Edesur">(Luz) Edesur</option>
+                        <option value="Cevige">(Luz) Cevige</option>
+                        <option value="Metrogas">(Gas) Metrogas</option>
+                        <option value="Municipalidad de Lanus">(Municipal) Lanus</option>
+                        <option value="Municipalidad de Villa Gesell">(Municipal) Villa Gesell</option>
+                        <option value="Claro">(Telefonia) Claro</option>
+                        <option value="Movistar">(Telefonia) Movistar</option>
+                    </select>
+                </label>
+            </div>
+            <div class="filters-actions">
+                <button id="btnAplicarFiltros" class="btn btn-primary" type="button">Aplicar</button>
+                <button id="btnLimpiarFiltros" class="btn btn-ghost" type="button">Limpiar</button>
+            </div>
+        </section>
 
-            <!-- Divider -->
-            <hr class="sidebar-divider my-0">
-
-            <!-- Nav Item - Dashboard -->
-            <li class="nav-item active">
-                <a class="nav-link" href="index.html">
-                    <i class="fas fa-fw fa-tachometer-alt"></i>
-                    <span>Dashboard</span>
-                </a>
-            </li>
-
-            <!-- Divider -->
-            <hr class="sidebar-divider">
-
-            <!-- Heading -->
-            <div class="sidebar-heading">
-                Interface
+        <section class="table-section" aria-label="Listado de pagos">
+            <div id="showHiddenCol" class="column-toggle">
+                <span>Columnas:</span>
+                <button class="toggle-vis" data-column="0" type="button">Nro Transaccion</button>
+                <button class="toggle-vis" data-column="1" type="button">Ente</button>
+                <button class="toggle-vis" data-column="2" type="button">N Cliente</button>
+                <button class="toggle-vis" data-column="3" type="button">N CtaDebito</button>
+                <button class="toggle-vis" data-column="4" type="button">Fecha Vto</button>
+                <button class="toggle-vis" data-column="5" type="button">Cuota</button>
+                <button class="toggle-vis" data-column="6" type="button">PDF</button>
+                <button class="toggle-vis" data-column="7" type="button">Tipo Comp</button>
+                <button class="toggle-vis" data-column="10" type="button">Importe USD</button>
+                <button class="toggle-vis" data-column="11" type="button">Referencia</button>
             </div>
 
-            <!-- Nav Item - Pages Collapse Menu -->
-            <li class="nav-item">
-                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="true" aria-controls="collapseTwo">
-                    <i class="fas fa-fw fa-cog"></i>
-                    <span>Components</span>
-                </a>
-                <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionSidebar">
-                    <div class="bg-white py-2 collapse-inner rounded">
-                        <h6 class="collapse-header">Custom Components:</h6>
-                        <a class="collapse-item" href="buttons.html">Buttons</a>
-                        <a class="collapse-item" href="cards.html">Cards</a>
-                    </div>
-                </div>
-            </li>
-
-            <!-- Nav Item - Utilities Collapse Menu -->
-            <li class="nav-item">
-                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseUtilities" aria-expanded="true" aria-controls="collapseUtilities">
-                    <i class="fas fa-fw fa-wrench"></i>
-                    <span>Utilities</span>
-                </a>
-                <div id="collapseUtilities" class="collapse" aria-labelledby="headingUtilities" data-parent="#accordionSidebar">
-                    <div class="bg-white py-2 collapse-inner rounded">
-                        <h6 class="collapse-header">Custom Utilities:</h6>
-                        <a class="collapse-item" href="utilities-color.html">Colors</a>
-                        <a class="collapse-item" href="utilities-border.html">Borders</a>
-                        <a class="collapse-item" href="utilities-animation.html">Animations</a>
-                        <a class="collapse-item" href="utilities-other.html">Other</a>
-                    </div>
-                </div>
-            </li>
-
-            <!-- Divider -->
-            <hr class="sidebar-divider">
-
-            <!-- Heading -->
-            <div class="sidebar-heading">
-                Addons
+            <div class="table-wrap">
+                <table id="dataTable" class="display compact" width="100%">
+                    <thead>
+                        <tr>
+                            <th>Nro Transaccion</th>
+                            <th>Ente</th>
+                            <th>N Cliente</th>
+                            <th>N CtaDebito</th>
+                            <th>Fecha Vto</th>
+                            <th>Cuota</th>
+                            <th>PDF</th>
+                            <th>Tipo Comp</th>
+                            <th>Fecha Pago</th>
+                            <th>Importe $</th>
+                            <th>Importe USD</th>
+                            <th>Referencia</th>
+                        </tr>
+                    </thead>
+                    <tbody id="contenTabla"></tbody>
+                    <tfoot>
+                        <tr>
+                            <th>Nro Transaccion</th>
+                            <th>Ente</th>
+                            <th>N Cliente</th>
+                            <th>N CtaDebito</th>
+                            <th>Fecha Vto</th>
+                            <th>Cuota</th>
+                            <th>PDF</th>
+                            <th>Tipo Comp</th>
+                            <th>Fecha Pago</th>
+                            <th>Importe $</th>
+                            <th>Importe USD</th>
+                            <th>Referencia</th>
+                        </tr>
+                    </tfoot>
+                </table>
             </div>
+        </section>
+    </main>
 
-            <!-- Nav Item - Pages Collapse Menu -->
-            <li class="nav-item">
-                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePages" aria-expanded="true" aria-controls="collapsePages">
-                    <i class="fas fa-fw fa-folder"></i>
-                    <span>Pages</span>
-                </a>
-                <div id="collapsePages" class="collapse" aria-labelledby="headingPages" data-parent="#accordionSidebar">
-                    <div class="bg-white py-2 collapse-inner rounded">
-                        <h6 class="collapse-header">Login Screens:</h6>
-                        <a class="collapse-item" href="login.html">Login</a>
-                        <a class="collapse-item" href="register.html">Register</a>
-                        <a class="collapse-item" href="forgot-password.html">Forgot Password</a>
-                        <div class="collapse-divider"></div>
-                        <h6 class="collapse-header">Other Pages:</h6>
-                        <a class="collapse-item" href="404.html">404 Page</a>
-                        <a class="collapse-item" href="blank.html">Blank Page</a>
-                    </div>
-                </div>
-            </li>
+    @Scripts.Render("~/bundles/appscripts")
 
-            <!-- Nav Item - Charts -->
-            <li class="nav-item">
-                <a class="nav-link" href="charts.html">
-                    <i class="fas fa-fw fa-chart-area"></i>
-                    <span>Charts</span>
-                </a>
-            </li>
+    <script>
+        var table = null;
+        var colPath = -1;
 
-            <!-- Nav Item - Tables -->
-            <li class="nav-item">
-                <a class="nav-link" href="tables.html">
-                    <i class="fas fa-fw fa-table"></i>
-                    <span>Tables</span>
-                </a>
-            </li>
-
-            <!-- Divider -->
-            <hr class="sidebar-divider d-none d-md-block">
-
-            <!-- Sidebar Toggler (Sidebar) -->
-            <div class="text-center d-none d-md-inline">
-                <button class="rounded-circle border-0" id="sidebarToggle"></button>
-            </div>
-
-        </ul>
-        <!-- End of Sidebar -->
-        <!-- Content Wrapper -->
-        <div id="content-wrapper" class="d-flex flex-column">
-
-            <!-- Main Content -->
-            <div id="content">
-
-                <!-- Begin Page Content -->
-                <div class="container-fluid">
-
-
-
-                    <!-- Content Row -->
-                    <div class="row">
-
-                        <!-- PESOS -->
-                        <div class="col-xl-3 col-md-3 col-xs-6 mb-5 paneles">
-                            <div class="card border-left-primary shadow h-100 py-2">
-                                <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                        <div class="col mr-2">
-                                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Pesos</div>
-                                            <div id="pesosCalculados" class="h5 mb-0 font-weight-bold text-gray-800">-</div>
-                                        </div>
-                                        <div class="col-auto">
-                                            <i class="fas fa-calendar fa-2x text-gray-300"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- DOLARES -->
-                        <div class="col-xl-3 col-md-3 col-xs-6 mb-5 paneles">
-                            <div class="card border-left-success shadow h-100 py-2">
-                                <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                        <div class="col mr-2">
-                                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Dolares</div>
-                                            <div id="dolaresCalculados" class="h5 mb-0 font-weight-bold text-gray-800">-</div>
-                                        </div>
-                                        <div class="col-auto">
-                                            <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Earnings (Monthly) Card Example -->
-                        <div class="col-xl-2 col-md-6 mb-4 ocultar paneles">
-                            <div class="card border-left-info shadow h-100 py-2">
-                                <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                        <div class="col mr-2">
-                                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Tasks</div>
-                                            <div class="row no-gutters align-items-center">
-                                                <div class="col-auto">
-                                                    <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">50%</div>
-                                                </div>
-                                                <div class="col">
-                                                    <div class="progress progress-sm mr-2">
-                                                        <div class="progress-bar bg-info" role="progressbar" style="width: 50%" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100"></div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-auto">
-                                            <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Pending Requests Card Example -->
-                        <div class="col-xl-2 col-md-6 mb-4 ocultar paneles">
-                            <div class="card border-left-warning shadow h-100 py-2">
-                                <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                        <div class="col mr-2">
-                                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Pending Requests</div>
-                                            <div class="h5 mb-0 font-weight-bold text-gray-800">18</div>
-                                        </div>
-                                        <div class="col-auto">
-                                            <i class="fas fa-comments fa-2x text-gray-300"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-sm-6 botones">
-
-                            <button id="btnLeerPdf" type="button" class="btn btn-primary ocultar">
-                                <i class="fa fa-eye" aria-hidden="true"></i>
-                                Leer Pagos
-                            </button>
-                            <button id="btnActualizarPdf" type="button" class="btn btn-primary">
-                                <i class="fa fa-eye" aria-hidden="true"></i>
-                                Actualizar Pagos
-                            </button>
-                            <button id="btnConsultarDolar" type="button" class="btn btn-info ocultar">
-                                Consultar DOLAR
-                            </button>
-                            <button id="btnTotalizarDolares" type="button" class="btn btn-danger ocultar">
-                                Calcular totalas
-                            </button>
-                            <button onclick="notEnable();" id="exportReport" class="d-none d-sm-inline-block btn btn-primary shadow-sm ocultar">
-                                <i class="fas fa-download fa-sm text-white-50"></i> Generar Reporte
-                            </button>
-                            <button onclick="notEnable();" id="exportReport" class="d-none d-sm-inline-block btn btn-primary shadow-sm ocultar">
-                                <i class="fas fa-search fa-sm text-white-50"></i> Ver Pagos Duplicados
-                            </button>
-                        </div>
-
-                        @*<div class="col-xl-2 col-sm-3">
-                                <iframe width="140px" height="150px" src="https://www.dolarsi.com/cotizador/cotizadorDolarsiFull.php" frameborder="0" scrolling="0" allowfullscreen=""></iframe>
-                            </div>*@
-
-                    </div>
-
-                    <!-- contentMensajes -->
-                    <div class="row" id="contentMensajes">
-
-                    </div>
-
-                    @*<div id="div1" class="fa"></div>*@
-
-                    <div class="row">
-
-                        <!-- DataTales Example -->
-                        <div class="card shadow mb-4 col-lg-12">
-                            <div class="card-header py-3 ocultar">
-                                <h6 class="m-0 font-weight-bold text-primary">DataTables Example</h6>
-                            </div>
-                            <div id="cabeceraTabla" class="row">
-                                <div class="col-md-1 filtro" data-toggle="modal" data-target="#mofalFilter">
-                                    <button type="button" class="btn btn-primary" title="Filtrar"><i class="fa fa-filter" aria-hidden="true"></i></button>
-                                </div>
-                                <div class="col-md-10" id="showHiddenCol">
-                                    <strong>Mostrar/ocultar:</strong>
-                                    <a class="toggle-vis" data-column="0">Nro Transacción</a> -
-                                    <a class="toggle-vis" data-column="1">Ente</a> -
-                                    <a class="toggle-vis" data-column="2">Nº Cliente</a> -
-                                    <a class="toggle-vis" data-column="3">Nº CtaDebito</a> -
-                                    <a class="toggle-vis" data-column="4">Fecha Vto</a> -
-                                    <a class="toggle-vis" data-column="5">Cuota</a> -
-                                    <a class="toggle-vis" data-column="6">Pdf</a> -
-                                    <a class="toggle-vis" data-column="7">Tipo Comp</a> -
-                                    <a class="toggle-vis" data-column="10">Importe U$S</a> -
-                                    <a class="toggle-vis" data-column="11">Referencia</a>
-                                </div>
-
-                            </div>
-                            <div class="card-body dataTable">
-                                <div class="table-responsive">
-                                    <table class="table table-bordered stripe" id="dataTable" width="100%" cellspacing="0">
-                                        <thead>
-                                            <tr>
-                                                <th>Nro Transacción</th>
-                                                <th>Ente</th>
-                                                <th>Nº Cliente</th>
-                                                <th>Nº CtaDebito</th>
-                                                <th>Fecha Vto</th>
-                                                <th>Cuota</th>
-                                                @*<th>Referencia</th>
-                                                    <th>Concepto</th>*@
-                                                <th>Pdf</th>
-                                                <th>Tipo Comp</th>
-                                                <th>Fecha Pago</th>
-                                                <th>Importe $</th>
-                                                <th>Importe U$S</th>
-                                                <th>Referencia</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="contenTabla">
-                                        </tbody>
-
-                                        @*Se agrega fila inferior a la tabla para poder filtrar en cada columna*@
-                                        <tfoot>
-                                            <tr>
-                                                <th>Nro Transacción</th>
-                                                <th>Ente</th>
-                                                <th>Nº Cliente</th>
-                                                <th>Nº CtaDebito</th>
-                                                <th>Fecha Vto</th>
-                                                <th>Cuota</th>
-                                                @*<th>Referencia</th>
-                                                    <th>Concepto</th>*@
-                                                <th>Pdf</th>
-                                                <th>Tipo Comp</th>
-                                                <th>Fecha Pago</th>
-                                                <th>Importe $</th>
-                                                <th>Importe U$S</th>
-                                                <th>Referencia</th>
-                                            </tr>
-                                        </tfoot>
-
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-
-                </div>
-                <!-- /.container-fluid -->
-
-            </div>
-            <!-- End of Main Content -->
-            <!-- Footer -->
-            <footer class="sticky-footer bg-white">
-                <div class="container my-auto">
-                    <div class="copyright text-center my-auto">
-                        <span>Copyright &copy; Your Website 2022</span>
-                    </div>
-                </div>
-            </footer>
-            <!-- End of Footer -->
-
-        </div>
-        <!-- End of Content Wrapper -->
-
-    </div>
-    <!-- End of Page Wrapper -->
-    <!-- Scroll to Top Button-->
-    <a class="scroll-to-top rounded" href="#page-top">
-        <i class="fas fa-angle-up"></i>
-    </a>
-
-    <!-- Logout Modal-->
-    <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel">Ready to Leave?</h5>
-                    <button class="close" type="button" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">×</span>
-                    </button>
-                </div>
-                <div class="modal-body">Select "Logout" below if you are ready to end your current session.</div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
-                    <a class="btn btn-primary" href="login.html">Logout</a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- Modal -->
-    <div class="modal fade" id="mofalFilter" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel">Filtros</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-
-                    @*Filtros*@
-                    <div class="form-group row">
-                        <label class="col-sm-2 col-form-label"><strong>Importe $</strong></label>
-
-                        <label class="col-sm-1 col-form-label">desde</label>
-                        <div class="col-sm-4">
-                            <input type="text" class="form-control" id="ImporteDesde" placeholder="$ 0">
-                        </div>
-                        <label class="col-sm-1 col-form-label">hasta</label>
-                        <div class="col-sm-4">
-                            <input type="text" class="form-control" id="ImporteHasta" placeholder="$ 0">
-                        </div>
-                    </div>
-                    <div class="form-group row">
-                        <label class="col-sm-2 col-form-label"><strong>Referencia</strong></label>
-                        <div class="col-sm-5">
-                            <select class="custom-select" id="selectReference">
-                                <option value=""></option>
-                                <option value="0">-</option>
-                                <option value="1">Yrigoyen</option>
-                                <option value="2">Nico</option>
-                                <option value="3">Norma</option>
-                                <option value="4">Tia Raquel</option>
-                                <option value="5">Velez Sarsfield</option>
-                                <option value="6">Villa Gesell</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group row">
-                        <label class="col-sm-2 col-form-label"><strong>Ente</strong></label>
-                        <div class="col-sm-5">
-                            <select class="custom-select" id="selectEnte">
-                                <option value=""></option>
-                                <option value="Arba">Arba</option>
-                                <option value="Aguas Bonaerenses">(Agua) Aguas Bonaerenses</option>
-                                <option value="Agua y Saneamientos Argentinos">(Agua) AySA</option>
-                                <option value="Edesur">(Luz) Edesur</option>
-                                <option value="Cevige">(Luz) Cevige</option>
-                                <option value="Metrogas">(Gas) Metrogas</option>
-                                <option value="Municipalidad de Lanus">(Municipal) Lanus</option>
-                                <option value="Municipalidad de Villa Gesell">(Municipal) Villa Gesell</option>
-                                <option value="Claro">(Telefonía) Claro</option>
-                                <option value="Movistar">(Telefonía) Movistar</option>
-                            </select>
-                        </div>
-                    </div>
-
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
-                    <button type="button" class="btn btn-primary" data-dismiss="modal">Filtrar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Bootstrap core JavaScript-->
-    <script src="vendor/jquery/jquery.min.js"></script>
-    <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-
-    <!-- Core plugin JavaScript-->
-    <script src="vendor/jquery-easing/jquery.easing.min.js"></script>
-
-    <!-- Custom scripts for all pages-->
-    <script src="js/sb-admin-2.min.js"></script>
-
-    <!-- Page level plugins -->
-    <script src="vendor/chart.js/Chart.min.js"></script>
-
-    <!-- Page level custom scripts -->
-    <script src="js/demo/chart-area-demo.js"></script>
-    <script src="js/demo/chart-pie-demo.js"></script>
-
-</body>
-
-</html>
-
-<script>
-
-    //Variables generales
-    var table = null;
-    let colPath = -1;
-
-    var reiniciarVariablesGrales = function () {
-        //table = null;
-        colPath = -1;
-    };
-
-    var consultarDolar = function () {
-
-        $.ajax({
-            url: 'https://apis.datos.gob.ar/series/api/series/?ids=168.1_T_CAMBIOR_D_0_0_26&limit=5000&format=json',
-            type: 'GET',
-            //data:{d: "2019-11-31"},
-
-            // si la conexion es exitosa, ejecutará la función "respuesta", definida allí mismo.
-            success: function (respuesta) {
-
-
-                for (var i = 0; i < respuesta.data.length; i++) {
-                    var fecha = respuesta.data[i][0];
-                    var cotizacion = respuesta.data[i][1];
-
-                    var date = new Date();
-                    //var diaPresente = date.yyyymmdd();
-                    var diaPresente = '2020-04-28'; //Ultimo día q actualizaron la web apis.datos.gob.ar (xq la pandemia)
-
-                    //if (fecha == "2019-11-20") {
-                    if (fecha == diaPresente) {
-                        console.log(cotizacion);
-                        break;
-                    }
-                }
-
-
-            }, //fin function respuesta
-            error: function (err) {
-
-                if (err.status == 404) {
-                    console.log("NO se encontro el recurso!");
-                }
-
-                //console.log("No se ha podido obtener la información");
+        function parseMvcDate(value) {
+            if (!value) {
+                return '';
             }
-        });
-
-    };
-
-    var totalizarPesos = function () {
-        let indexDolar = 9; //Posición de columna de importe en Pesos
-        let totalDolares = 0;
-        var table = $('#dataTable').dataTable().api()
-        let valoresDolar = table.rows({ search: 'applied' }).data();
-        valoresDolar.each(function (item) {
-            totalDolares += item[indexDolar];
-        });        
-        let redondeo = parseFloat(totalDolares.toFixed(2));
-        let formatAux = new Intl.NumberFormat("de-DE").format(parseFloat(redondeo));
-        formatAux = '$  ' + formatAux;
-
-        $('#pesosCalculados').text(formatAux);
-    };
-
-    var totalizarDolares = function () {
-        let indexDolar = 10; //Posición de columna de importe en Dolares
-        let totalDolares = 0;
-        var table = $('#dataTable').dataTable().api()
-        let valoresDolar = table.rows({ search: 'applied' }).data();
-        valoresDolar.each(function (item) {
-            totalDolares += item[indexDolar];
-        });        
-        let redondeo = parseFloat(totalDolares.toFixed(2));
-        let formatAux = new Intl.NumberFormat("de-DE").format(parseFloat(redondeo));
-        formatAux = 'U$S  ' + formatAux;
-
-        $('#dolaresCalculados').text(formatAux);
-    };
-
-    var totalizarPagos = function () {
-        totalizarPesos();
-        totalizarDolares();
-    };
-
-    //var asignarClickPatk = function () {
-    //    $('.pathPDF').off('click');
-    //    $('.pathPDF').on('click', function () {            
-    //        window.open('/Home/GetReport?path=' + this.innerHTML, "_blank"); 
-    //    });
-    //};
-
-    var asignarClickPath = function (elem) {
-        //elem.off('click');
-        elem.on('click', function () {            
-            window.open('/Home/GetReport?path=' + this.innerHTML, "_blank"); 
-        });
-    };
-
-    var agregarFilaFilter = function () {
-        
-        // Setup - add a text input to each footer cell
-        $('#dataTable thead tr').clone(true).appendTo( '#dataTable thead' );
-        $('#dataTable thead tr:eq(1) th').each( function (i) {
-            var title = $(this).text();
-            $(this).html( '<input type="text" placeholder="Search '+title+'" />' );
- 
-            $( 'input', this ).on( 'keyup change', function () {
-                if ( table.column(i).search() !== this.value ) {
-                    table
-                        .column(i)
-                        .search( this.value )
-                        .draw();
-                }
-            } );
-        } );
-    };
-
-    var getCacheCotizacionHistoria = function () {
-        $.ajax({
-	        url: 'Home/GetCacheCotizacionHistoria/',
-	        success: function(respuesta) {
-                
-	        },
-            error: function (err) {
-
-                if (err.status == 404) {
-                    console.log("NO se encontro el recurso!");
-                    //err.responseText
-                }
-
+            var ticks = value.toString().replace('/Date(', '').replace(')/', '');
+            var date = new Date(parseInt(ticks, 10));
+            if (isNaN(date.getTime())) {
+                return '';
             }
-        });
-    };
-
-    var leerPdf = function (action) {
-        //$(this).hide();
-
-        if (action == undefined || action == '') {
-            action = "LeerPDF"
+            return date.yyyymmdd();
         }
 
-        reiniciarVariablesGrales();
+        function formatArs(value) {
+            return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2 }).format(value || 0);
+        }
 
-        //Se eliminan las filas existentes
-        $('#dataTable').DataTable().rows().remove().draw(false);
+        function formatUsd(value) {
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(value || 0);
+        }
 
-        $.ajax({
-            url: 'Home/' + action +'/',
-            success: function (respuesta) {
+        function setLoading(isLoading) {
+            var button = $('#btnActualizarPdf');
+            var state = $('#loadState');
+            if (isLoading) {
+                button.prop('disabled', true).text('Actualizando...');
+                state.text('Procesando comprobantes...');
+            } else {
+                button.prop('disabled', false).text('Actualizar pagos');
+                state.text('Listo');
+            }
+        }
 
-                var lstMsj = respuesta.Mensajes.Lista;
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('adp-theme', theme);
+            var isDark = theme === 'dark';
+            $('#themeToggle').attr('aria-pressed', isDark ? 'true' : 'false').text(isDark ? 'Modo claro' : 'Modo oscuro');
+        }
 
-                if (lstMsj.length == 0) {
+        function initTheme() {
+            var stored = localStorage.getItem('adp-theme');
+            if (stored === 'dark' || stored === 'light') {
+                setTheme(stored);
+                return;
+            }
+            var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            setTheme(prefersDark ? 'dark' : 'light');
+        }
+
+        function reiniciarVariablesGrales() {
+            colPath = -1;
+        }
+
+        function getStringReference(nroRerence) {
+            var nro = typeof nroRerence === 'string' ? parseInt(nroRerence, 10) : nroRerence;
+            switch (nro) {
+                case 0: return '-';
+                case 1: return 'Yrigoyen';
+                case 2: return 'Nico';
+                case 3: return 'Norma';
+                case 4: return 'Tia Raquel';
+                case 5: return 'Velez Sarsfield';
+                case 6: return 'Villa Gesell';
+                default: return '-';
+            }
+        }
+
+        function totalizarPagos() {
+            var dt = $('#dataTable').dataTable().api();
+            var rows = dt.rows({ search: 'applied' }).data();
+            var totalPesos = 0;
+            var totalDolares = 0;
+
+            rows.each(function (item) {
+                totalPesos += Number(item[9]) || 0;
+                totalDolares += Number(item[10]) || 0;
+            });
+
+            $('#pesosCalculados').text(formatArs(totalPesos));
+            $('#dolaresCalculados').text(formatUsd(totalDolares));
+        }
+
+        function leerPdf(action) {
+            var endpoint = action || 'LeerPDF';
+            reiniciarVariablesGrales();
+            setLoading(true);
+            limpiarMensajes();
+
+            $('#dataTable').DataTable().rows().remove().draw(false);
+
+            $.ajax({
+                url: 'Home/' + endpoint + '/',
+                success: function (respuesta) {
+                    var lstMsj = respuesta.Mensajes.Lista;
+                    if (lstMsj.length > 0) {
+                        procesarMensajes(lstMsj);
+                        return;
+                    }
 
                     var t = $('#dataTable').DataTable();
-
-                    //var t = $('#dataTable').DataTable();
                     t.rows().remove().draw(false);
+
                     respuesta.pagos.forEach(function (pago) {
-
-                        let fp = pago.FechaVencimiento.replace("/Date(", "").replace(")/", "");
-                        let aux_fechaVencimiento = new Date(parseInt(fp)).yyyymmdd();
-
-                        let fpa = pago.FechaPago.replace("/Date(", "").replace(")/", "");
-                        let aux_fechaPago = new Date(parseInt(fpa)).yyyymmdd();
-
-                        //let array_fechaVencimiento = pago.FechaVencimiento.split('T')
-                        //let aux_fechaVencimiento = array_fechaVencimiento.length > 1 ? array_fechaVencimiento[0] : pago.FechaVencimiento;
-                        //
-                        //let array_fechaPago = pago.FechaPago.split('T')
-                        //let aux_fechaPago = array_fechaPago.length > 1 ? array_fechaPago[0] : pago.FechaPago;
-
                         t.row.add([
-                            pago.NroTransaccion, //"00843607 (298)"
-                            pago.Ente, //"Buenos Aires- Arba Inmobiliario"
-                            pago.NroCliente, // 00101250028675"
-                            pago.NroCtaDebito, //" 5063-29958/8"
-                            aux_fechaVencimiento, // "2018-08-13T00:00:00"
-                            pago.Cuota, // " 004/18"
-                            //pago.Referencia, // null
-                            //pago.Concepto, // null
-
-                            //pago.Path, // "D:\Norma\000   PAGOS\18-08 - Arba NO SE.pdf"
-                            '<i class="fa fa-file-pdf" data-path="' + pago.Path + '" title="' + pago.Path + '"></i>',
-
-                            pago.TipoComprobante, // 0
-                            aux_fechaPago, // "2018-08-09T09:53:23"
-                            pago.Importe, // 377.1
-                            pago.ImporteDolar, // 377.1
-                            getStringReference(pago.Referencia),
+                            pago.NroTransaccion,
+                            pago.Ente,
+                            pago.NroCliente,
+                            pago.NroCtaDebito,
+                            parseMvcDate(pago.FechaVencimiento),
+                            pago.Cuota,
+                            '<button type="button" class="pdf-link" data-path="' + pago.Path + '">Abrir</button>',
+                            pago.TipoComprobante,
+                            parseMvcDate(pago.FechaPago),
+                            Number(pago.Importe) || 0,
+                            Number(pago.ImporteDolar) || 0,
+                            getStringReference(pago.Referencia)
                         ]).draw(true);
                     });
 
-                    //Acciones luego de lectura de Pagos
                     callBackLeerPdf();
-
-                } else {
-                    limpiarMensajes();
-                    procesarMensajes(lstMsj);
-                    //lstMsj.forEach(function (msj) {
-                    //    alert(msj.texto);
-                    //});
+                },
+                error: function (err) {
+                    procesarMensajes([{ Tipo: 0, Texto: 'No se pudo actualizar la informacion. Estado: ' + err.status }]);
+                },
+                complete: function () {
+                    setLoading(false);
                 }
-
-            },
-            error: function (err) {
-
-                if (err.status == 404) {
-                    console.log("NO se encontro el recurso!");
-                    //err.responseText
-                }
-
-                //console.log("No se ha podido obtener la información");
-            }
-        });
-    };
-
-    function isNumeric(value) {
-        return /^-?\d+$/.test(value);
-    }
-
-    var getStringReference = function (nroRerence) {
-        var nro = 0;
-
-        if (typeof nroRerence === 'string' || nroRerence instanceof String) {
-            nro = parseInt(nroRerence);            
-        } else {
-            nro = nroRerence;
+            });
         }
 
-        switch (nro) {
-            case 0:
-                return "-";
-            case 1:
-                return "Yrigoyen";
-            case 2:
-                return "Nico";
-            case 3:
-                return "Norma";
-            case 4:
-                return "Tia Raquel";
-            case 5:
-                return "Velez Sarsfield";
-            case 6:
-                return "Villa Gesell";
+        function callBackLeerPdf() {
+            var dt = $('#dataTable').DataTable();
+            dt.columns.adjust().draw(false);
+            totalizarPagos();
         }
-    }
 
-    var notEnable = function () {
-        alert("Todavía no esta disponible esta funcionalidad");
-    }
+        function applyAdvancedFilters() {
+            table.draw();
+            totalizarPagos();
+        }
 
-    var callBackLeerPdf = function () {
-        var table = $('#dataTable').DataTable();
+        $(document).ready(function () {
+            initTheme();
 
-        //Redibuja la tabla para ajustar ancho de columnas
-        table.columns.adjust().draw();
+            $('#themeToggle').on('click', function () {
+                var current = document.documentElement.getAttribute('data-theme');
+                setTheme(current === 'dark' ? 'light' : 'dark');
+            });
 
-        //asignarClickPatk();
+            $('#btnToggleFiltros').on('click', function () {
+                var panel = $('#filtersPanel');
+                var isCollapsed = panel.hasClass('is-collapsed');
+                panel.toggleClass('is-collapsed', !isCollapsed);
+                $(this).attr('aria-expanded', isCollapsed ? 'true' : 'false').text(isCollapsed ? 'Ocultar filtros' : 'Mostrar filtros');
+            });
 
-        //console.log("2");
+            $('#btnAplicarFiltros').on('click', applyAdvancedFilters);
+            $('#btnLimpiarFiltros').on('click', function () {
+                $('#ImporteDesde').val('');
+                $('#ImporteHasta').val('');
+                $('#selectReference').val('');
+                $('#selectEnte').val('');
+                applyAdvancedFilters();
+            });
 
-        totalizarPagos();
+            $('#btnActualizarPdf').on('click', function () {
+                leerPdf('ActualizarPDF');
+            });
 
-        //setTimeout(function () {
-        //    var table2 = $('#dataTable').removeAttr('width').DataTable({
-        //        scrollY: "300px",
-        //        scrollX: true,
-        //        scrollCollapse: true,
-        //        paging: false,
-        //        columnDefs: [
-        //            { width: 200, targets: 0 }
-        //        ],
-        //        fixedColumns: true
-        //    });
-        //}, 1000);
-    };
+            $('#dataTable tfoot th').each(function () {
+                var title = $(this).text();
+                $(this).html('<input type="text" placeholder="Buscar ' + title + '" />');
+            });
 
-    //INICIO: Asignacion de eventos a botones
-    $('#btnLeerPdf').click(function () {
-        leerPdf();
-    });
-
-    $('#btnActualizarPdf').click(function () {
-        leerPdf("ActualizarPDF");
-    });
-    //FIN: Asignacion de eventos a botones
-
-    $(document).ready(function () {
-
-        //Se cargan los datos de la cotización histórica
-        getCacheCotizacionHistoria();
-
-        //Se resetean variables
-        reiniciarVariablesGrales();
-
-        // Setup - add a text input to each footer cell
-        $('#dataTable tfoot th').each(function () {
-            var title = $(this).text();
-            $(this).html('<input type="text" placeholder="Buscar ' + title + '" />');
-        });
-
-        table = $('#dataTable').DataTable({
-
-            //Al momento de la creación de la fila en la tabla se le agrega un class a la columna 6 (Path)
-            "createdRow": function (row, data, dataIndex) {
-
-                //Si no se setio la columna referente al campo del path del pdf
-                if (colPath == -1) {
-                    for (var i = 0; i < row.cells.length; i++) {
-                        var celda = row.cells[i];
-                        var esColPath = celda.innerHTML.includes("data-path");
-
-                        if (esColPath) {
-                            colPath = i;
-                            break;
+            table = $('#dataTable').DataTable({
+                createdRow: function (row) {
+                    if (colPath === -1) {
+                        for (var i = 0; i < row.cells.length; i++) {
+                            if (row.cells[i].innerHTML.indexOf('data-path') > -1) {
+                                colPath = i;
+                                break;
+                            }
                         }
-                        
                     }
-                }
 
-                //Le agrega el puntero clasico de Link y el evento para el click a leer el pdf
-                $($('td', row)[colPath]).addClass("pathPDF").addClass("pointer")
-                                .on('click', function () {
-                                    let ruta = $(this.innerHTML).data('path');
-                                    window.open('/Home/GetReport?path=' + ruta, "_blank"); 
-                                });
-
-                row.cells[colPath] = row.cells[colPath];
-                data[colPath] = "pepe";
-                if (colPath == dataIndex) {
-                    //this.innerHTML = "pepe";
-                }
-            },
-
-            "aoColumnDefs": [
-                { "bSortable": false, "aTargets": [0] },
-                { "sWidth": "25px", "aTargets": [6] },
-                { "sWidth": "90px", "aTargets": [4, 8] },
-                { "sWidth": "100px", "aTargets": [9, 10] },
-                /*{ "sWidth": "10px", "aTargets": [0, 1] },*/                
-                /*{ "sWidth": "80px", "aTargets": [2] },*/
-            ],
-            "bAutoWidth": false,
-
-            //Fila inferior de la tabla con filtros sobre cada columna
-            initComplete: function () {
-                // Apply the search
-                this.api()
-                    .columns()
-                    .every(function () {
+                    if (colPath > -1) {
+                        $($('td', row)[colPath]).addClass('pointer').on('click', function () {
+                            var ruta = $(this).find('.pdf-link').data('path');
+                            if (ruta) {
+                                window.open('/Home/GetReport?path=' + encodeURIComponent(ruta), '_blank');
+                            }
+                        });
+                    }
+                },
+                aoColumnDefs: [
+                    { bSortable: false, aTargets: [6] },
+                    { sWidth: '120px', aTargets: [4, 8, 9, 10] }
+                ],
+                bAutoWidth: false,
+                orderCellsTop: true,
+                language: {
+                    search: 'Buscar:',
+                    info: 'Mostrando _START_ a _END_ de _TOTAL_ pagos',
+                    infoEmpty: 'Sin pagos disponibles',
+                    lengthMenu: 'Mostrar _MENU_ pagos',
+                    paginate: {
+                        previous: 'Anterior',
+                        next: 'Siguiente'
+                    }
+                },
+                initComplete: function () {
+                    this.api().columns().every(function () {
                         var that = this;
-
                         $('input', this.footer()).on('keyup change clear', function () {
                             if (that.search() !== this.value) {
                                 that.search(this.value).draw();
+                                totalizarPagos();
                             }
                         });
                     });
-            },
+                }
+            });
 
-            //Se configurar para el filtro
-            orderCellsTop: true,
-            fixedHeader: true
-        });
+            table.columns([0, 2, 3, 5, 7]).visible(false, false);
+            table.columns.adjust().draw(false);
 
-        //Se ocultan columnas: NroTransaccion, Cliente, Nº CtaDebito, Tipo Comp
-        table.columns( [ 0, 2, 3, 5, 7 ] ).visible( false, false );
-        table.columns.adjust().draw(false); // adjust column sizing and redraw
+            $('button.toggle-vis').on('click', function () {
+                var column = table.column($(this).attr('data-column'));
+                column.visible(!column.visible());
+            });
 
-        $('a.toggle-vis').on( 'click', function (e) {
-            e.preventDefault();
+            $.fn.dataTable.ext.search.push(function (settings, data) {
+                if (settings.nTable.id !== 'dataTable') {
+                    return true;
+                }
 
-            // Get the column API object
-            var column = table.column( $(this).attr('data-column') );
+                var min = parseFloat($('#ImporteDesde').val());
+                var max = parseFloat($('#ImporteHasta').val());
+                var importe = parseFloat(data[9]) || 0;
 
-            // Toggle the visibility
-            column.visible( ! column.visible() );
-        } );
-
-        
-
-        //agregarFilaFilter();
-
-
-
-        $('#btnConsultarDolar').click(consultarDolar);
-
-        $('#btnTotalizarDolares').click(totalizarPagos);
-
-        /* Custom filtering function which will search data in column four between two values */
-        $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
-
-            var rowVisible = true;
-
-            //Condiciones de Importe Min y Max
-            var min = parseInt($('input#ImporteDesde').val(), 10);
-            var max = parseInt($('input#ImporteHasta').val(), 10);
-            var importe = parseFloat(data[9]) || 0; // use data for the importe column
-            if (
-                (isNaN(min) && isNaN(max)) ||
-                (isNaN(min) && importe <= max) ||
-                (min <= importe && isNaN(max)) ||
-                (min <= importe && importe <= max)
-            ) {
-                rowVisible = true;
-            } else {
-                return false;
-            }
-
-            //Condición de cbo de Referencia
-            var selectReference = $('#selectReference').val();
-            if (selectReference != '') {
-                var importeDT = data[11]; // use data for the Referencia column
-                var txtReference = getStringReference(selectReference);
-
-                if (importeDT == txtReference) {
-                    rowVisible = true;
-                } else {
+                if (!isNaN(min) && importe < min) {
                     return false;
                 }
-            }
-
-            //Condición de cbo de Ente
-            var selectEnte = $('#selectEnte').val().toLocaleLowerCase()
-            if (selectEnte != '') {
-                var enteDT = data[1].toLocaleLowerCase(); // use data for the Referencia column
-                if (enteDT.includes(selectEnte)) {
-                    rowVisible = true;
-                } else {
+                if (!isNaN(max) && importe > max) {
                     return false;
                 }
-            }
-            
-            return rowVisible;
+
+                var selectReference = $('#selectReference').val();
+                if (selectReference !== '') {
+                    var txtReference = getStringReference(selectReference);
+                    if ((data[11] || '').toString() !== txtReference) {
+                        return false;
+                    }
+                }
+
+                var selectEnte = ($('#selectEnte').val() || '').toLowerCase();
+                if (selectEnte !== '') {
+                    var enteDT = (data[1] || '').toLowerCase();
+                    if (enteDT.indexOf(selectEnte) === -1) {
+                        return false;
+                    }
+                }
+
+                return true;
+            });
+
+            leerPdf();
         });
-
-        
-
-        // Redibujar la tabla filtrando cuando se escriba en los filtros
-        $('#ImporteDesde, #ImporteHasta').keyup(function () {
-            table.draw();
-            totalizarPagos();
-        });
-        // Redibujar la tabla filtrando cuando se seleccione los combos de los filtros
-        $('#selectReference,#selectEnte').change(function () {
-            table.draw();
-            totalizarPagos();
-        });
-
-        $('tfoot input').keyup(function () {
-            totalizarPagos();
-        });
-
-        leerPdf();
-    });
-
-</script>
+    </script>
+</body>
+</html>
