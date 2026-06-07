@@ -57,6 +57,7 @@
     <Compile Include="Models\Enumerables.cs" />
     <Compile Include="Models\ErrorViewModel.cs" />
     <Compile Include="Models\Mensaje.cs" />
+    <Compile Include="Models\DatosSerializados.cs" />
     <Compile Include="Models\Pago.cs" />
     <Compile Include="Models\PagoEfectuado.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -12,7 +12,7 @@ namespace App
             bundles.Add(new ScriptBundle("~/bundles/appscripts").Include(
                 "~/Scripts/jquery-{version}.js",
                 "~/vendor/datatables/jquery.dataTables.min.js",
-                "~/js/generales.js"));
+                "~/Scripts/app.js"));
 
             // CSS: DataTables base skin + app styles
             bundles.Add(new StyleBundle("~/bundles/appcss").Include(

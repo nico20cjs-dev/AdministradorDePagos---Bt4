@@ -1,31 +1,32 @@
-﻿using System.Web;
+﻿using System.Runtime.Caching;
+using System.Web;
 using System.Web.Mvc;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
 using AdminPagosDLL.Models;
 using AdminPagosDLL.Core;
-using System.IO;
-using System.Data;
-using System.Web.UI;
 using System.Net;
+using System.Diagnostics;
 
 namespace AdminPagosDLL.Controllers
 {
     public class HomeController : Controller
     {
         public FMensaje Mensajes = new FMensaje();
-        private static readonly object CotizacionHistoricaLock = new object();
 
-        public static string TxtCotizacionHistoria = "";
-        public static List<Pago> LstPagos = new List<Pago>();
+        private const string PagosCacheKey = "PagosCache";
+        private const string CotizacionCacheKey = "CotizacionHistoricaJson";
+        private const string CantNoAbiertosCacheKey = "CantNoAbiertos";
+        private const string CantNoIdentificadosCacheKey = "CantNoIdentificados";
+        private const string CantNoValidosCacheKey = "CantNoValidos";
+        private const string NoAbiertosPathsCacheKey = "NoAbiertosPaths";
+        private const string NoIdentificadosPathsCacheKey = "NoIdentificadosPaths";
+        private const string NoValPathsCacheKey = "NoValPaths";
 
         public ActionResult Index()
         {
             InicializarCotizacionHistorica();
-
             return View();
         }
 
@@ -33,41 +34,34 @@ namespace AdminPagosDLL.Controllers
         {
             Mensajes.Limpiar();
 
-            if (!String.IsNullOrWhiteSpace(TxtCotizacionHistoria))
+            var cache = MemoryCache.Default;
+            var json = cache.Get(CotizacionCacheKey) as string;
+
+            if (!String.IsNullOrWhiteSpace(json))
             {
-                CotizacionHistorica.CargarCotizacion(TxtCotizacionHistoria);
+                CotizacionHistorica.CargarCotizacion(json);
                 return;
             }
 
             try
             {
-                lock (CotizacionHistoricaLock)
+                var cachePath = Server.MapPath("~/App_Data/cotizacionesHistoricas.json");
+                if (System.IO.File.Exists(cachePath))
                 {
-                    if (!String.IsNullOrWhiteSpace(TxtCotizacionHistoria))
-                    {
-                        CotizacionHistorica.CargarCotizacion(TxtCotizacionHistoria);
-                        return;
-                    }
-
-                    var cachePath = Server.MapPath("~/App_Data/cotizacionesHistoricas.json");
-                    if (System.IO.File.Exists(cachePath))
-                    {
-                        TxtCotizacionHistoria = System.IO.File.ReadAllText(cachePath);
-                    }
-
-                    if (String.IsNullOrWhiteSpace(TxtCotizacionHistoria))
-                    {
-                        using (var client = new WebClient())
-                        {
-                            TxtCotizacionHistoria = client.DownloadString("https://apis.datos.gob.ar/series/api/series/?ids=168.1_T_CAMBIOR_D_0_0_26&limit=5000&format=json");
-                        }
-
-                        System.IO.File.WriteAllText(cachePath, TxtCotizacionHistoria);
-                    }
-
-                    CotizacionHistorica.CargarCotizacion(TxtCotizacionHistoria);
+                    json = System.IO.File.ReadAllText(cachePath);
                 }
 
+                if (String.IsNullOrWhiteSpace(json))
+                {
+                    using (var client = new WebClient())
+                    {
+                        json = client.DownloadString("https://apis.datos.gob.ar/series/api/series/?ids=168.1_T_CAMBIOR_D_0_0_26&limit=5000&format=json");
+                    }
+                    System.IO.File.WriteAllText(cachePath, json);
+                }
+
+                cache.Set(CotizacionCacheKey, json, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
+                CotizacionHistorica.CargarCotizacion(json);
             }
             catch (Exception ex)
             {
@@ -109,7 +103,8 @@ namespace AdminPagosDLL.Controllers
                 return new HttpStatusCodeResult(HttpStatusCode.BadRequest, "El archivo solicitado no es PDF.");
             }
 
-            bool rutaHabilitada = LstPagos
+            var pagos = MemoryCache.Default.Get(PagosCacheKey) as List<Pago>;
+            bool rutaHabilitada = pagos != null && pagos
                 .OfType<PagoEfectuado>()
                 .Any(p =>
                     !String.IsNullOrWhiteSpace(p.Path) &&
@@ -133,33 +128,61 @@ namespace AdminPagosDLL.Controllers
         /// Lee y procesa todos los Pdfs.
         /// </summary>
         /// <returns></returns>
-        public JsonResult LeerPDF()
+        public JsonResult LeerPDF(bool forceReinterpret = false)
         {
             Mensajes.Limpiar();
-            var retorno = Json(new { Mensajes }, JsonRequestBehavior.AllowGet);
 
-            //Primero lee la cache
-            if (LstPagos.Count > 0) return Json(new { Mensajes, pagos = LstPagos }, JsonRequestBehavior.AllowGet);
+            var cache = MemoryCache.Default;
+            var pagos = cache.Get(PagosCacheKey) as List<Pago>;
+
+            //Primero lee la cache (saltear si forceReinterpret)
+            if (!forceReinterpret && pagos != null && pagos.Count > 0)
+            {
+                return Json(new {
+                    Mensajes,
+                    pagos,
+                    cantNoAbiertos = cache.Get(CantNoAbiertosCacheKey) as int? ?? 0,
+                    cantNoIdentificados = cache.Get(CantNoIdentificadosCacheKey) as int? ?? 0,
+                    cantNoValidos = cache.Get(CantNoValidosCacheKey) as int? ?? 0,
+                    noAbiertosPaths = cache.Get(NoAbiertosPathsCacheKey) as List<string> ?? new List<string>(),
+                    noIdentificadosPaths = cache.Get(NoIdentificadosPathsCacheKey) as List<string> ?? new List<string>(),
+                    noValPaths = cache.Get(NoValPathsCacheKey) as List<string> ?? new List<string>()
+                }, JsonRequestBehavior.AllowGet);
+            }
 
             try
             {
                 var funcion = new Funciones();
-                var pagos = new List<Pago>();
-                pagos = funcion.CargarPagos();
+                pagos = funcion.CargarPagos(forceReinterpret: forceReinterpret);
+
                 if (funcion.Mensajes.Lista.Any())
                 {
                     Mensajes.Agregar(funcion.Mensajes.Lista);
-                    return retorno;
+                    return Json(new { Mensajes }, JsonRequestBehavior.AllowGet);
                 }
 
-                LstPagos = pagos;
+                var noValPaths = funcion.noVal.OfType<PagoEfectuado>().Select(p => p.Path).ToList();
 
-                return Json(new { Mensajes, pagos }, JsonRequestBehavior.AllowGet);
-
+                cache.Set(PagosCacheKey, pagos, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
+                cache.Set(CantNoAbiertosCacheKey, funcion.CantNoAbiertos, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
+                cache.Set(CantNoIdentificadosCacheKey, funcion.CantNoIdentificados, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
+                cache.Set(CantNoValidosCacheKey, funcion.noVal.Count, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
+                cache.Set(NoAbiertosPathsCacheKey, funcion.NoAbiertosPaths, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
+                cache.Set(NoIdentificadosPathsCacheKey, funcion.NoIdentificadosPaths, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
+                cache.Set(NoValPathsCacheKey, noValPaths, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
+                return Json(new {
+                    Mensajes,
+                    pagos,
+                    cantNoAbiertos = funcion.CantNoAbiertos,
+                    cantNoIdentificados = funcion.CantNoIdentificados,
+                    cantNoValidos = funcion.noVal.Count,
+                    noAbiertosPaths = funcion.NoAbiertosPaths,
+                    noIdentificadosPaths = funcion.NoIdentificadosPaths,
+                    noValPaths
+                }, JsonRequestBehavior.AllowGet);
             }
             catch (Exception ex)
             {
-                //listaMensjes.Add( return Json(new { Mensajes = "Error: " + ex.Message });
                 return Json(new { Mensajes }, JsonRequestBehavior.AllowGet);
             }
         }
@@ -171,31 +194,43 @@ namespace AdminPagosDLL.Controllers
         public JsonResult ActualizarPDF()
         {
             Mensajes.Limpiar();
-            var retorno = Json(new { Mensajes }, JsonRequestBehavior.AllowGet);
 
             try
             {
-                //1. Borra la cache
-                LstPagos.Clear();
-
-                //2. Borro lo serializado
-                Funciones.BorrarSerializacion();
-
-                return LeerPDF();
-
+                //Borra la cache en memoria, no la serialización
+                MemoryCache.Default.Remove(PagosCacheKey);
+                MemoryCache.Default.Remove(CantNoAbiertosCacheKey);
+                MemoryCache.Default.Remove(CantNoIdentificadosCacheKey);
+                MemoryCache.Default.Remove(CantNoValidosCacheKey);
+                MemoryCache.Default.Remove(NoAbiertosPathsCacheKey);
+                MemoryCache.Default.Remove(NoIdentificadosPathsCacheKey);
+                MemoryCache.Default.Remove(NoValPathsCacheKey);
+                return LeerPDF(forceReinterpret: true);
             }
             catch (Exception ex)
             {
-                //listaMensjes.Add( return Json(new { Mensajes = "Error: " + ex.Message });
                 return Json(new { Mensajes }, JsonRequestBehavior.AllowGet);
             }
         }
 
-        //[ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        //public ActionResult Error()
-        //{
-        //    return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
-        //}
+        public ActionResult OpenFolder(string path)
+        {
+            if (String.IsNullOrWhiteSpace(path))
+                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
 
+            try
+            {
+                var dir = System.IO.Path.GetDirectoryName(path);
+                if (!System.IO.Directory.Exists(dir))
+                    return HttpNotFound();
+
+                Process.Start("explorer.exe", "\"" + dir + "\"");
+                return new HttpStatusCodeResult(HttpStatusCode.OK);
+            }
+            catch
+            {
+                return new HttpStatusCodeResult(HttpStatusCode.InternalServerError);
+            }
+        }
     }
 }

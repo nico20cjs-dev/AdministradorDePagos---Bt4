@@ -1,14 +1,13 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using AdminPagosDLL.Models;
 using iTextSharp.text.pdf;
 using iTextSharp.text.pdf.parser;
 using System.IO;
 using System.Configuration;
-using System.Xml.Serialization;
-using System.Xml;
+using Newtonsoft.Json;
 
 namespace AdminPagosDLL.Core
 {
@@ -16,35 +15,49 @@ namespace AdminPagosDLL.Core
     {
         public List<Pago> lstModelos = new List<Pago>();
         public List<Pago> noVal = new List<Pago>();
+        public List<string> NoAbiertosPaths = new List<string>();
+        public List<string> NoIdentificadosPaths = new List<string>();
+        public int CantNoAbiertos { get; set; }
+        public int CantNoIdentificados { get; set; }
         public FMensaje Mensajes = new FMensaje();
+        private static readonly string ArchivoSerializacion = GetSerializacionPath();
+        private static readonly ConcurrentDictionary<string, DateTime> _fileTimestamps = new ConcurrentDictionary<string, DateTime>();
+
+        private static string GetSerializacionPath()
+        {
+            var dir = new System.IO.DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+            if (dir.Name.Equals("bin", StringComparison.OrdinalIgnoreCase))
+                dir = dir.Parent;
+            var appData = System.IO.Path.Combine(dir.FullName, "App_Data");
+            // Limpiar serialización vieja (.xml) si existe
+            var oldXml = System.IO.Path.Combine(appData, "pagos_serializados.xml");
+            if (File.Exists(oldXml))
+                try { File.Delete(oldXml); } catch { }
+            return System.IO.Path.Combine(appData, "pagos_serializados.json");
+        }
 
         #region Metodos Públicos
 
-        private void LeerDirectorio()
-        { 
-        
-        }
-
-        public List<Pago> CargarPagos(string path = "")
+        public List<Pago> CargarPagos(string path = "", bool forceReinterpret = false)
         {
-            #region Deserealización
-
-            try
+            if (!forceReinterpret)
             {
-                //Si es la primera vez que se ejecuta el sitio se lee los pagos serializados
-                var pagos = DeSerializeObject<List<Pago>>();
-                if (pagos != null)
+                try
                 {
-                    return pagos;
-                }                
+                    var datos = DeSerializeDatos();
+                    if (datos != null && datos.Pagos.Count > 0 && datos.Pagos[0] is PagoEfectuado)
+                    {
+                        lstModelos = datos.Pagos;
+                        noVal = datos.NoValidos;
+                        NoAbiertosPaths = datos.NoAbiertosPaths;
+                        NoIdentificadosPaths = datos.NoIdentificadosPaths;
+                        return lstModelos;
+                    }
+                }
+                catch
+                {
+                }
             }
-            catch (Exception ex)
-            {
-
-            }
-
-            #endregion
-
 
             return InterpretarPDF(path);
         }
@@ -96,6 +109,28 @@ namespace AdminPagosDLL.Core
                 var files = Directory.EnumerateFiles(directorio, "*.pdf", SearchOption.AllDirectories);
                 int cantidadArchivos = files.Count();
                 var lstArchivos = files.ToList();
+
+                // Cargar estado previo para skip de archivos sin cambios
+                DatosSerializados oldState = null;
+                bool hasCache = _fileTimestamps.Count > 0;
+                if (hasCache)
+                {
+                    try { oldState = DeSerializeDatos(); } catch { }
+                    // Verificar que los objetos sean del tipo correcto (PagoEfectuado).
+                    // Si el JSON fue guardado sin TypeNameHandling, se deserializan como Pago base.
+                    if (oldState != null && oldState.Pagos.Count > 0 && !(oldState.Pagos[0] is PagoEfectuado))
+                    {
+                        oldState = null;
+                    }
+                }
+                if (hasCache && oldState != null)
+                {
+                    lstModelos = oldState.Pagos;
+                    noVal = oldState.NoValidos;
+                    NoAbiertosPaths = oldState.NoAbiertosPaths;
+                    NoIdentificadosPaths = oldState.NoIdentificadosPaths;
+                }
+
                 PdfReader reader = null;
                 var format = new Formatos();
 
@@ -114,6 +149,12 @@ namespace AdminPagosDLL.Core
                 {
                     path = lstArchivos[i];
 
+                    // Skip archivos sin cambios si tenemos estado previo
+                    if (hasCache && oldState != null && _fileTimestamps.TryGetValue(path, out var lastWrite) && lastWrite == File.GetLastWriteTimeUtc(path))
+                    {
+                        continue;
+                    }
+
                     //if (i == 120 || path.Contains("2020-06-22 CEVIGE VTO"))
                     //{
                     //    break;
@@ -129,15 +170,8 @@ namespace AdminPagosDLL.Core
                     }
                     catch (Exception ex)
                     {
-                        //Si no se puede abrir puede tener pass
-                        if (ex.Message.Contains("password"))
-                        {
-
-                        }
-                        else
-                        {
-                            //TODO: en este caso se debe lanzar una "InvalidPdfException"
-                        }
+                        CantNoAbiertos++;
+                        NoAbiertosPaths.Add(path);
 
                         continue;
                     }
@@ -201,7 +235,12 @@ namespace AdminPagosDLL.Core
                             }
                         }
 
-                        if (!leer) continue;
+                        if (!leer)
+                        {
+                            CantNoIdentificados++;
+                            NoIdentificadosPaths.Add(path);
+                            continue;
+                        }
 
                         using (StringReader readerTxt = new StringReader(text))
                         {
@@ -484,6 +523,16 @@ namespace AdminPagosDLL.Core
                     }
 
                     reader.Close();
+
+                    _fileTimestamps[path] = File.GetLastWriteTimeUtc(path);
+                }
+
+                // Limpiar entradas huérfanas (archivos que ya no existen)
+                var currentFiles = new HashSet<string>(lstArchivos);
+                foreach (var key in _fileTimestamps.Keys.ToList())
+                {
+                    if (!currentFiles.Contains(key))
+                        _fileTimestamps.TryRemove(key, out _);
                 }
 
             }
@@ -494,90 +543,63 @@ namespace AdminPagosDLL.Core
             }
 
 
-            SerializePagos(lstModelos);
+            SerializarDatos();
 
             return lstModelos;
         }
 
-        /// <summary>
-        /// Serializa los pagos.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="serializableObject"></param>
-        public void SerializePagos<T>(T serializableObject)
+        public void SerializarDatos()
         {
-            if (serializableObject == null) { return; }
-
             try
             {
-                XmlDocument xmlDocument = new XmlDocument();
-                XmlSerializer serializer = new XmlSerializer(serializableObject.GetType());
-                //XmlSerializer serializer = new XmlSerializer(typeof(Pago), new Type[] { typeof(Pago) });
-                using (MemoryStream stream = new MemoryStream())
+                var datos = new DatosSerializados
                 {
-                    serializer.Serialize(stream, serializableObject);
-                    stream.Position = 0;
-                    xmlDocument.Load(stream);
-                    xmlDocument.Save(ConfigurationManager.AppSettings["PagosSerializados"]);
-                }
+                    Pagos = lstModelos,
+                    NoValidos = noVal,
+                    NoAbiertosPaths = NoAbiertosPaths,
+                    NoIdentificadosPaths = NoIdentificadosPaths
+                };
+
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(ArchivoSerializacion));
+                string json = JsonConvert.SerializeObject(datos, new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.Auto
+                });
+                System.IO.File.WriteAllText(ArchivoSerializacion, json);
             }
-            catch (Exception ex)
+            catch
             {
-                //Log exception here
             }
         }
 
-
-        /// <summary>
-        /// Deserializes an xml file into an object list
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public T DeSerializeObject<T>()
+        public static DatosSerializados DeSerializeDatos()
         {
-            //if (string.IsNullOrEmpty(fileName)) { return default(T); }
-
-            T objectOut = default(T);
-            string fileName = ConfigurationManager.AppSettings["PagosSerializados"];
+            if (!File.Exists(ArchivoSerializacion)) return null;
 
             try
             {
-                XmlDocument xmlDocument = new XmlDocument();
-                xmlDocument.Load(fileName);
-                string xmlString = xmlDocument.OuterXml;
-
-                using (StringReader read = new StringReader(xmlString))
+                string json = System.IO.File.ReadAllText(ArchivoSerializacion);
+                return JsonConvert.DeserializeObject<DatosSerializados>(json, new JsonSerializerSettings
                 {
-                    Type outType = typeof(T);
-
-                    XmlSerializer serializer = new XmlSerializer(outType);
-                    using (XmlReader reader = new XmlTextReader(read))
-                    {
-                        objectOut = (T)serializer.Deserialize(reader);
-                    }
-                }
+                    TypeNameHandling = TypeNameHandling.Auto
+                });
             }
-            catch (Exception ex)
+            catch
             {
-                //Log exception here
+                return null;
             }
-
-            return objectOut;
         }
 
         public static void BorrarSerializacion()
         {
             try
             {
-                string fileName = ConfigurationManager.AppSettings["PagosSerializados"];
-                if (File.Exists(fileName))
-                {
-                    File.Delete(fileName);
-                }
+                if (File.Exists(ArchivoSerializacion))
+                    File.Delete(ArchivoSerializacion);
+                _fileTimestamps.Clear();
             }
             catch (Exception)
             {
-
             }
         }
 

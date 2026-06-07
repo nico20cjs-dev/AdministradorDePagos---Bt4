@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,7 +12,7 @@ namespace AdminPagosDLL.Core
     {
 
         public static FMensaje Mensajes = new FMensaje();
-        static Dictionary<string, double> CacheBD = new Dictionary<string, double>();
+        static ConcurrentDictionary<string, double> CacheBD = new ConcurrentDictionary<string, double>();
 
         #region Métodos Públicos
 
@@ -19,12 +20,14 @@ namespace AdminPagosDLL.Core
         {            
             dynamic jo = Newtonsoft.Json.Linq.JObject.Parse(jsonHistorico);
             var items = jo.data;
+
+            CacheBD.Clear();
             foreach (var item in items)
             {
                 string fecha = item.First.Value;
                 double cotizacion = item.Last.Value;
 
-                CacheBD[fecha] = cotizacion;
+                CacheBD.TryAdd(fecha, cotizacion);
             }
 
         }
@@ -37,7 +40,7 @@ namespace AdminPagosDLL.Core
 
         public static double GetCotizacionPorFecha(string fecha)
         { 
-            return CacheBD.ContainsKey(fecha) ? CacheBD[fecha] : 0;
+            return CacheBD.TryGetValue(fecha, out double cotizacion) ? cotizacion : 0;
         }
 
         #endregion

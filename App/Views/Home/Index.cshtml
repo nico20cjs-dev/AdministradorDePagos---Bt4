@@ -1,6 +1,6 @@
 ﻿@{ Layout = null; }
 <!DOCTYPE html>
-<html lang="es" data-theme="light">
+<html lang="es">
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -9,6 +9,14 @@
     <meta name="robots" content="index,follow">
     <meta name="theme-color" content="#0f172a">
     <title>Administrador de Pagos</title>
+    <script>
+        (function () {
+            var t = localStorage.getItem('adp-theme');
+            if (t !== 'dark' && t !== 'light') t = 'dark';
+            document.documentElement.setAttribute('data-theme', t);
+            if (t === 'dark') document.querySelector('meta[name=theme-color]').content = '#0b1220';
+        })();
+    </script>
 
     @Styles.Render("~/bundles/appcss")
 </head>
@@ -20,8 +28,14 @@
                 <p class="app-subtitle">Control centralizado de comprobantes, filtros y totales.</p>
             </div>
             <div class="topbar-actions">
-                <button id="themeToggle" class="btn btn-ghost" type="button" aria-pressed="false">Modo oscuro</button>
-                <button id="btnActualizarPdf" class="btn btn-primary" type="button">Actualizar pagos</button>
+                <button id="themeToggle" class="btn btn-ghost" type="button" aria-pressed="false">
+                    <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.39 5.39 0 0 1-4.4 2.26 5.38 5.38 0 0 1-5.38-5.38 5.39 5.39 0 0 1 2.26-4.4A9.05 9.05 0 0 0 12 3Z"/></svg>
+                    <span>Modo oscuro</span>
+                </button>
+                <button id="btnActualizarPdf" class="btn btn-primary" type="button">
+                    <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M1 4v6h6m16 10v-6h-6M3.51 15a9 9 0 0 0 14.85 3.36l-2.12-2.12a5.5 5.5 0 0 1-8.37-.74M20.49 9a9 9 0 0 0-14.85-3.36l2.12 2.12a5.5 5.5 0 0 1 8.37.74"/></svg>
+                    <span>Actualizar pagos</span>
+                </button>
             </div>
         </header>
 
@@ -34,14 +48,25 @@
                 <p class="stat-label">Total en Dolares</p>
                 <p id="dolaresCalculados" class="stat-value">USD 0.00</p>
             </article>
+            <article class="stat-card stat-card-warn">
+                <p class="stat-label">No procesados</p>
+                <p id="noProcesados" class="stat-value">0</p>
+                <button id="btnDetalleFallos" class="stat-action" type="button" title="Ver detalle de archivos no procesados">
+                    <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M8 6h8M8 12h8m-8 6h5"/><rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                    Detalle
+                </button>
+            </article>
         </section>
 
         <section class="toolbar" aria-label="Herramientas de vista">
             <div class="toolbar-left">
-                <button id="btnToggleFiltros" class="btn btn-secondary" type="button" aria-expanded="false" aria-controls="filtersPanel">Mostrar filtros</button>
+                <button id="btnToggleFiltros" class="btn btn-secondary" type="button" aria-expanded="false" aria-controls="filtersPanel">
+                    <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 21v-7m0-4V3m8 18v-9m0-4V3m8 18v-5m0-4V3M1 14h6m2-6h6m2 8h6"/></svg>
+                    <span>Mostrar filtros</span>
+                </button>
                 <span id="loadState" class="load-state" aria-live="polite">Listo</span>
+                <div id="loadSpinner" class="spinner" aria-hidden="true"></div>
             </div>
-            <div id="div1" class="hourglass" aria-hidden="true"></div>
         </section>
 
         <section id="contentMensajes" class="message-grid" aria-live="polite"></section>
@@ -87,8 +112,14 @@
                 </label>
             </div>
             <div class="filters-actions">
-                <button id="btnAplicarFiltros" class="btn btn-primary" type="button">Aplicar</button>
-                <button id="btnLimpiarFiltros" class="btn btn-ghost" type="button">Limpiar</button>
+                <button id="btnAplicarFiltros" class="btn btn-primary" type="button">
+                    <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/></svg>
+                    <span>Aplicar</span>
+                </button>
+                <button id="btnLimpiarFiltros" class="btn btn-ghost" type="button">
+                    <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M18 6 6 18M6 6l12 12"/></svg>
+                    <span>Limpiar</span>
+                </button>
             </div>
         </section>
 
@@ -97,8 +128,8 @@
                 <span>Columnas:</span>
                 <button class="toggle-vis" data-column="0" type="button">Nro Transaccion</button>
                 <button class="toggle-vis" data-column="1" type="button">Ente</button>
-                <button class="toggle-vis" data-column="2" type="button">N Cliente</button>
-                <button class="toggle-vis" data-column="3" type="button">N CtaDebito</button>
+                <button class="toggle-vis" data-column="2" type="button">Nº Cliente</button>
+                <button class="toggle-vis" data-column="3" type="button">Nº CtaDebito</button>
                 <button class="toggle-vis" data-column="4" type="button">Fecha Vto</button>
                 <button class="toggle-vis" data-column="5" type="button">Cuota</button>
                 <button class="toggle-vis" data-column="6" type="button">PDF</button>
@@ -113,8 +144,8 @@
                         <tr>
                             <th>Nro Transaccion</th>
                             <th>Ente</th>
-                            <th>N Cliente</th>
-                            <th>N CtaDebito</th>
+                            <th>Nº Cliente</th>
+                            <th>Nº CtaDebito</th>
                             <th>Fecha Vto</th>
                             <th>Cuota</th>
                             <th>PDF</th>
@@ -130,8 +161,8 @@
                         <tr>
                             <th>Nro Transaccion</th>
                             <th>Ente</th>
-                            <th>N Cliente</th>
-                            <th>N CtaDebito</th>
+                            <th>Nº Cliente</th>
+                            <th>Nº CtaDebito</th>
                             <th>Fecha Vto</th>
                             <th>Cuota</th>
                             <th>PDF</th>
@@ -147,280 +178,21 @@
         </section>
     </main>
 
+    <div id="modalFallos" class="modal-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Archivos no procesados">
+        <div class="modal-panel">
+            <header class="modal-header">
+                <h2>PDFs no procesados</h2>
+                <button id="modalFallosCerrar" class="modal-close" type="button" aria-label="Cerrar">&times;</button>
+            </header>
+            <div id="modalFallosBody" class="modal-body"></div>
+            <footer class="modal-footer">
+                <span class="modal-hint">Hacé clic sobre un archivo para abrir su carpeta</span>
+                <button id="modalFallosCerrarBtn" class="btn btn-ghost" type="button">Cerrar</button>
+            </footer>
+        </div>
+    </div>
+
     @Scripts.Render("~/bundles/appscripts")
 
-    <script>
-        var table = null;
-        var colPath = -1;
-
-        function parseMvcDate(value) {
-            if (!value) {
-                return '';
-            }
-            var ticks = value.toString().replace('/Date(', '').replace(')/', '');
-            var date = new Date(parseInt(ticks, 10));
-            if (isNaN(date.getTime())) {
-                return '';
-            }
-            return date.yyyymmdd();
-        }
-
-        function formatArs(value) {
-            return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2 }).format(value || 0);
-        }
-
-        function formatUsd(value) {
-            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(value || 0);
-        }
-
-        function setLoading(isLoading) {
-            var button = $('#btnActualizarPdf');
-            var state = $('#loadState');
-            if (isLoading) {
-                button.prop('disabled', true).text('Actualizando...');
-                state.text('Procesando comprobantes...');
-            } else {
-                button.prop('disabled', false).text('Actualizar pagos');
-                state.text('Listo');
-            }
-        }
-
-        function setTheme(theme) {
-            document.documentElement.setAttribute('data-theme', theme);
-            localStorage.setItem('adp-theme', theme);
-            var isDark = theme === 'dark';
-            $('#themeToggle').attr('aria-pressed', isDark ? 'true' : 'false').text(isDark ? 'Modo claro' : 'Modo oscuro');
-        }
-
-        function initTheme() {
-            var stored = localStorage.getItem('adp-theme');
-            if (stored === 'dark' || stored === 'light') {
-                setTheme(stored);
-                return;
-            }
-            var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            setTheme(prefersDark ? 'dark' : 'light');
-        }
-
-        function reiniciarVariablesGrales() {
-            colPath = -1;
-        }
-
-        function getStringReference(nroRerence) {
-            var nro = typeof nroRerence === 'string' ? parseInt(nroRerence, 10) : nroRerence;
-            switch (nro) {
-                case 0: return '-';
-                case 1: return 'Yrigoyen';
-                case 2: return 'Nico';
-                case 3: return 'Norma';
-                case 4: return 'Tia Raquel';
-                case 5: return 'Velez Sarsfield';
-                case 6: return 'Villa Gesell';
-                default: return '-';
-            }
-        }
-
-        function totalizarPagos() {
-            var dt = $('#dataTable').dataTable().api();
-            var rows = dt.rows({ search: 'applied' }).data();
-            var totalPesos = 0;
-            var totalDolares = 0;
-
-            rows.each(function (item) {
-                totalPesos += Number(item[9]) || 0;
-                totalDolares += Number(item[10]) || 0;
-            });
-
-            $('#pesosCalculados').text(formatArs(totalPesos));
-            $('#dolaresCalculados').text(formatUsd(totalDolares));
-        }
-
-        function leerPdf(action) {
-            var endpoint = action || 'LeerPDF';
-            reiniciarVariablesGrales();
-            setLoading(true);
-            limpiarMensajes();
-
-            $('#dataTable').DataTable().rows().remove().draw(false);
-
-            $.ajax({
-                url: 'Home/' + endpoint + '/',
-                success: function (respuesta) {
-                    var lstMsj = respuesta.Mensajes.Lista;
-                    if (lstMsj.length > 0) {
-                        procesarMensajes(lstMsj);
-                        return;
-                    }
-
-                    var t = $('#dataTable').DataTable();
-                    t.rows().remove().draw(false);
-
-                    respuesta.pagos.forEach(function (pago) {
-                        t.row.add([
-                            pago.NroTransaccion,
-                            pago.Ente,
-                            pago.NroCliente,
-                            pago.NroCtaDebito,
-                            parseMvcDate(pago.FechaVencimiento),
-                            pago.Cuota,
-                            '<button type="button" class="pdf-link" data-path="' + pago.Path + '">Abrir</button>',
-                            pago.TipoComprobante,
-                            parseMvcDate(pago.FechaPago),
-                            Number(pago.Importe) || 0,
-                            Number(pago.ImporteDolar) || 0,
-                            getStringReference(pago.Referencia)
-                        ]).draw(true);
-                    });
-
-                    callBackLeerPdf();
-                },
-                error: function (err) {
-                    procesarMensajes([{ Tipo: 0, Texto: 'No se pudo actualizar la informacion. Estado: ' + err.status }]);
-                },
-                complete: function () {
-                    setLoading(false);
-                }
-            });
-        }
-
-        function callBackLeerPdf() {
-            var dt = $('#dataTable').DataTable();
-            dt.columns.adjust().draw(false);
-            totalizarPagos();
-        }
-
-        function applyAdvancedFilters() {
-            table.draw();
-            totalizarPagos();
-        }
-
-        $(document).ready(function () {
-            initTheme();
-
-            $('#themeToggle').on('click', function () {
-                var current = document.documentElement.getAttribute('data-theme');
-                setTheme(current === 'dark' ? 'light' : 'dark');
-            });
-
-            $('#btnToggleFiltros').on('click', function () {
-                var panel = $('#filtersPanel');
-                var isCollapsed = panel.hasClass('is-collapsed');
-                panel.toggleClass('is-collapsed', !isCollapsed);
-                $(this).attr('aria-expanded', isCollapsed ? 'true' : 'false').text(isCollapsed ? 'Ocultar filtros' : 'Mostrar filtros');
-            });
-
-            $('#btnAplicarFiltros').on('click', applyAdvancedFilters);
-            $('#btnLimpiarFiltros').on('click', function () {
-                $('#ImporteDesde').val('');
-                $('#ImporteHasta').val('');
-                $('#selectReference').val('');
-                $('#selectEnte').val('');
-                applyAdvancedFilters();
-            });
-
-            $('#btnActualizarPdf').on('click', function () {
-                leerPdf('ActualizarPDF');
-            });
-
-            $('#dataTable tfoot th').each(function () {
-                var title = $(this).text();
-                $(this).html('<input type="text" placeholder="Buscar ' + title + '" />');
-            });
-
-            table = $('#dataTable').DataTable({
-                createdRow: function (row) {
-                    if (colPath === -1) {
-                        for (var i = 0; i < row.cells.length; i++) {
-                            if (row.cells[i].innerHTML.indexOf('data-path') > -1) {
-                                colPath = i;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (colPath > -1) {
-                        $($('td', row)[colPath]).addClass('pointer').on('click', function () {
-                            var ruta = $(this).find('.pdf-link').data('path');
-                            if (ruta) {
-                                window.open('/Home/GetReport?path=' + encodeURIComponent(ruta), '_blank');
-                            }
-                        });
-                    }
-                },
-                aoColumnDefs: [
-                    { bSortable: false, aTargets: [6] },
-                    { sWidth: '120px', aTargets: [4, 8, 9, 10] }
-                ],
-                bAutoWidth: false,
-                orderCellsTop: true,
-                language: {
-                    search: 'Buscar:',
-                    info: 'Mostrando _START_ a _END_ de _TOTAL_ pagos',
-                    infoEmpty: 'Sin pagos disponibles',
-                    lengthMenu: 'Mostrar _MENU_ pagos',
-                    paginate: {
-                        previous: 'Anterior',
-                        next: 'Siguiente'
-                    }
-                },
-                initComplete: function () {
-                    this.api().columns().every(function () {
-                        var that = this;
-                        $('input', this.footer()).on('keyup change clear', function () {
-                            if (that.search() !== this.value) {
-                                that.search(this.value).draw();
-                                totalizarPagos();
-                            }
-                        });
-                    });
-                }
-            });
-
-            table.columns([0, 2, 3, 5, 7]).visible(false, false);
-            table.columns.adjust().draw(false);
-
-            $('button.toggle-vis').on('click', function () {
-                var column = table.column($(this).attr('data-column'));
-                column.visible(!column.visible());
-            });
-
-            $.fn.dataTable.ext.search.push(function (settings, data) {
-                if (settings.nTable.id !== 'dataTable') {
-                    return true;
-                }
-
-                var min = parseFloat($('#ImporteDesde').val());
-                var max = parseFloat($('#ImporteHasta').val());
-                var importe = parseFloat(data[9]) || 0;
-
-                if (!isNaN(min) && importe < min) {
-                    return false;
-                }
-                if (!isNaN(max) && importe > max) {
-                    return false;
-                }
-
-                var selectReference = $('#selectReference').val();
-                if (selectReference !== '') {
-                    var txtReference = getStringReference(selectReference);
-                    if ((data[11] || '').toString() !== txtReference) {
-                        return false;
-                    }
-                }
-
-                var selectEnte = ($('#selectEnte').val() || '').toLowerCase();
-                if (selectEnte !== '') {
-                    var enteDT = (data[1] || '').toLowerCase();
-                    if (enteDT.indexOf(selectEnte) === -1) {
-                        return false;
-                    }
-                }
-
-                return true;
-            });
-
-            leerPdf();
-        });
-    </script>
 </body>
 </html>

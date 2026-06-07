@@ -1,10 +1,5 @@
-
 Formateo Datos
  - Expresar el "Monto" con signo $
-
-DataBase
-
-
 
 BackEnd
 
