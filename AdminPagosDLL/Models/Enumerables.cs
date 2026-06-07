@@ -19,6 +19,7 @@ public enum EReferencia
     Nico,
     Norma,
     TiaRaquel,
+    TiaRenee,
     VelezSarsfield,
     VillaGesell
 }

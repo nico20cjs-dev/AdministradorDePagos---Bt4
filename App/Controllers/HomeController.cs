@@ -205,6 +205,9 @@ namespace AdminPagosDLL.Controllers
                 MemoryCache.Default.Remove(NoAbiertosPathsCacheKey);
                 MemoryCache.Default.Remove(NoIdentificadosPathsCacheKey);
                 MemoryCache.Default.Remove(NoValPathsCacheKey);
+
+                Funciones.BorrarSerializacion();
+
                 return LeerPDF(forceReinterpret: true);
             }
             catch (Exception ex)

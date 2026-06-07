@@ -263,6 +263,29 @@ html[data-theme='dark'] body {
     display: flex;
     align-items: center;
     gap: 0.35rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.collapse-arrow {
+    display: inline-block;
+    font-size: 0.6rem;
+    transition: transform 0.2s;
+    color: var(--muted);
+    width: 0.8rem;
+    flex-shrink: 0;
+}
+
+.is-collapsed .collapse-arrow {
+    transform: rotate(90deg);
+}
+
+.fallos-section-body {
+    overflow: hidden;
+}
+
+.is-collapsed .fallos-section-body {
+    display: none;
 }
 
 .fallos-count {

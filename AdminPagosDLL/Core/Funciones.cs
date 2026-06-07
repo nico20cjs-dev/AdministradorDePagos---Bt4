@@ -51,6 +51,8 @@ namespace AdminPagosDLL.Core
                         noVal = datos.NoValidos;
                         NoAbiertosPaths = datos.NoAbiertosPaths;
                         NoIdentificadosPaths = datos.NoIdentificadosPaths;
+                        CantNoAbiertos = NoAbiertosPaths.Count;
+                        CantNoIdentificados = NoIdentificadosPaths.Count;
                         return lstModelos;
                     }
                 }
@@ -68,9 +70,6 @@ namespace AdminPagosDLL.Core
             
             try
             {
-                //DatosDB.Class1 obj = new DatosDB.Class1();
-                //var datos = obj.Leer();
-
                 var directorio = "";
                 string defecto = @"D:\Norma\000   PAGOS\";
                 string rutaConfig = ConfigurationManager.AppSettings["RutaDePagos"];
@@ -159,9 +158,9 @@ namespace AdminPagosDLL.Core
                     //{
                     //    break;
                     //}
-                    if (i == 100 || path.Contains("2020-06-22 CEVIGE VTO"))
+                    if (path.Contains("2020-06-22 CEVIGE VTO"))
                     {
-                        break;
+                        
                     }
                     
                     try
@@ -401,7 +400,6 @@ namespace AdminPagosDLL.Core
                                     case "20902705060": //Claro
                                     case "08620902705060": //Claro
                                     case "08620382717056": //Claro
-                                    case "00904777178": //Edesur                                        
                                         break;
 
                                     //NICO
@@ -446,6 +444,11 @@ namespace AdminPagosDLL.Core
                                     case "0290184409": //Movistar-TiaRaquel
                                     case "0000000000445015012": //Municimal-TiaRaquel
                                         _pago.Referencia = EReferencia.TiaRaquel;
+                                        break;
+
+                                    //TIA RENEE
+                                    case "00904777178": //Edesur
+                                        _pago.Referencia = EReferencia.TiaRenee;
                                         break;
 
                                     //GESELL

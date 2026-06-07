@@ -1,10 +1,5 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AdminPagosDLL.Core
 {
@@ -13,8 +8,6 @@ namespace AdminPagosDLL.Core
 
         public static FMensaje Mensajes = new FMensaje();
         static ConcurrentDictionary<string, double> CacheBD = new ConcurrentDictionary<string, double>();
-
-        #region Métodos Públicos
 
         public static void CargarCotizacion(string jsonHistorico)
         {            
@@ -42,8 +35,6 @@ namespace AdminPagosDLL.Core
         { 
             return CacheBD.TryGetValue(fecha, out double cotizacion) ? cotizacion : 0;
         }
-
-        #endregion
 
     }
 }

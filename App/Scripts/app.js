@@ -131,8 +131,9 @@ function getStringReference(nroRerence) {
         case 2: return 'Nico';
         case 3: return 'Norma';
         case 4: return 'Tia Raquel';
-        case 5: return 'Velez Sarsfield';
-        case 6: return 'Villa Gesell';
+        case 5: return 'Tia Renee';
+        case 6: return 'Velez Sarsfield';
+        case 7: return 'Villa Gesell';
         default: return '-';
     }
 }
@@ -258,9 +259,16 @@ function renderFallosModal(data) {
     var html = '';
     sections.forEach(function (sec) {
         var paths = data[sec.key] || [];
-        html += '<div class="fallos-section">';
-        html += '<h3 class="fallos-section-title">' + sec.icon + ' ' + sec.label + ' <span class="fallos-count">' + sec.count + '</span></h3>';
-        if (paths.length === 0) {
+        var isEmpty = paths.length === 0;
+        var collapsed = sec.count > 10 ? ' is-collapsed' : '';
+        html += '<div class="fallos-section' + collapsed + '">';
+        html += '<h3 class="fallos-section-title" tabindex="0" role="button" aria-expanded="' + (collapsed ? 'false' : 'true') + '">';
+        html += '<span class="collapse-arrow">&#x25B6;</span>';
+        html += sec.icon + ' ' + sec.label;
+        html += ' <span class="fallos-count">' + sec.count + '</span>';
+        html += '</h3>';
+        html += '<div class="fallos-section-body">';
+        if (isEmpty) {
             html += '<p class="fallos-empty">Ninguno</p>';
         } else {
             html += '<ul class="fallos-list">';
@@ -271,7 +279,7 @@ function renderFallosModal(data) {
             });
             html += '</ul>';
         }
-        html += '</div>';
+        html += '</div></div>';
     });
     $('#modalFallosBody').html(html);
 }
@@ -328,6 +336,12 @@ $(document).ready(function () {
     $('#modalFallosBody').on('click', '.fallos-item', function () {
         openFileFolder($(this).attr('data-path'));
     });
+    $('#modalFallosBody').on('click', '.fallos-section-title', function () {
+        var section = $(this).closest('.fallos-section');
+        var isCollapsed = section.hasClass('is-collapsed');
+        section.toggleClass('is-collapsed', !isCollapsed);
+        $(this).attr('aria-expanded', isCollapsed ? 'true' : 'false');
+    });
 
     $('#dataTable tbody').on('click', '.pdf-link', function (e) {
         e.stopPropagation();
@@ -342,7 +356,34 @@ $(document).ready(function () {
         $(this).html('<input type="text" placeholder="Buscar ' + title + '" />');
     });
 
+    var _savedStateLoaded = false;
+
     table = $('#dataTable').DataTable({
+        stateSave: true,
+        stateLoadParams: function (settings, data) {
+            if (data) {
+                _savedStateLoaded = true;
+                if (data.advancedFilters) {
+                    $('#ImporteDesde').val(data.advancedFilters.importeDesde || '');
+                    $('#ImporteHasta').val(data.advancedFilters.importeHasta || '');
+                    $('#selectReference').val(data.advancedFilters.selectReference || '');
+                    $('#selectEnte').val(data.advancedFilters.selectEnte || '');
+                }
+                if (data.filtersCollapsed) {
+                    $('#filtersPanel').addClass('is-collapsed');
+                    $('#btnToggleFiltros').attr('aria-expanded', 'false').text('Mostrar filtros');
+                }
+            }
+        },
+        stateSaveParams: function (settings, data) {
+            data.advancedFilters = {
+                importeDesde: $('#ImporteDesde').val(),
+                importeHasta: $('#ImporteHasta').val(),
+                selectReference: $('#selectReference').val(),
+                selectEnte: $('#selectEnte').val()
+            };
+            data.filtersCollapsed = $('#filtersPanel').hasClass('is-collapsed');
+        },
         aoColumnDefs: [
             { bSortable: false, aTargets: [6] },
             { sWidth: '120px', aTargets: [4, 8, 9, 10] }
@@ -362,7 +403,12 @@ $(document).ready(function () {
             thousands: '.'
         },
         initComplete: function () {
-            this.api().columns().every(function () {
+            var api = this.api();
+            if (!_savedStateLoaded) {
+                api.columns([0, 2, 3, 5, 7]).visible(false, false);
+                api.columns.adjust().draw(false);
+            }
+            api.columns().every(function () {
                 var that = this;
                 var debounceTimer;
                 $('input', this.footer()).on('keyup change clear', function () {
@@ -377,9 +423,6 @@ $(document).ready(function () {
             });
         }
     });
-
-    table.columns([0, 2, 3, 5, 7]).visible(false, false);
-    table.columns.adjust().draw(false);
 
     $('button.toggle-vis').each(function () {
         var col = table.column($(this).attr('data-column'));
