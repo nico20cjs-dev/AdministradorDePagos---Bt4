@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -9,39 +10,53 @@ namespace AdminPagosDLL.Core
     {
 		public FMensaje Mensajes = new FMensaje();
 
-		public DateTime CrearFecha(string fecha)
+        // ─────────────────────────────────────────────────────────────────
+        //  Formatos soportados — en orden de probabilidad descendente
+        //  para que TryParseExact falle lo antes posible en los casos raros.
+        //
+        //  Fuentes observadas en los comprobantes:
+        //    "08-02-2021"               → dd-MM-yyyy
+        //    "08-02-2021 13:43:32"      → dd-MM-yyyy HH:mm:ss
+        //    "01/01/2024"               → dd/MM/yyyy
+        //    "01/01/2024 20:32:22"      → dd/MM/yyyy HH:mm:ss   ← nuevo
+        // ─────────────────────────────────────────────────────────────────
+        private static readonly string[] FormatosSoportados =
         {
-			DateTime retorno = new DateTime();
-			try
-			{
-				var auxFecha = fecha.Trim().Split(' ');
+            "dd-MM-yyyy HH:mm:ss",  // con guión + hora     (más frecuente)
+            "dd-MM-yyyy",           // con guión sin hora
+            "dd/MM/yyyy HH:mm:ss",  // con barra  + hora     (nuevo requerimiento)
+            "dd/MM/yyyy",           // con barra  sin hora
+        };
 
-				var aux = auxFecha[0].Split('-');
-				int dia = int.Parse(aux[0]);
-				int mes = int.Parse(aux[1]);
-				int año = int.Parse(aux[2]);
+        /// <summary>
+        /// Convierte una cadena de texto en un <see cref="DateTime"/>.
+        /// Soporta los separadores '-' y '/' con y sin componente horaria.
+        /// Devuelve <see cref="DateTime.MinValue"/> si el texto es inválido.
+        /// </summary>
+        /// <param name="fecha">Texto a convertir (puede tener espacios extra).</param>
+        public DateTime CrearFecha(string fecha)
+        {
+            if (string.IsNullOrWhiteSpace(fecha))
+                return DateTime.MinValue;
 
-				int hora = 0;
-				int min = 0;
-				int seg = 0;
+            string texto = fecha.Trim();
 
-				//Si tiene HH:mm:ss
-				if (auxFecha.Count() > 1)
-				{
-					var auxHora = auxFecha[1].Split('-');
-					hora = int.Parse(auxHora[0]);
-					min = int.Parse(auxHora[1]);
-					seg = int.Parse(auxHora[2]);
-				}
+            if (DateTime.TryParseExact(
+                    texto,
+                    FormatosSoportados,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out DateTime resultado))
+            {
+                return resultado;
+            }
 
-				retorno = new DateTime(año, mes, dia, hora, min, seg);
+            // Fallback: intento cultural genérico (cubre formatos no anticipados)
+            if (DateTime.TryParse(texto, CultureInfo.InvariantCulture, DateTimeStyles.None, out resultado))
+                return resultado;
 
-				return retorno;
-			}
-			catch (Exception ex)
-			{
-				return retorno;
-			}
+            Logger.Add($"[Formatos.CrearFecha] No se pudo parsear la fecha: '{texto}'");
+            return DateTime.MinValue;
         }
 
     }

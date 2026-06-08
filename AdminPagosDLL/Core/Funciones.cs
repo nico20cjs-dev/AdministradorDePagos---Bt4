@@ -1,13 +1,14 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using AdminPagosDLL.Models;
+﻿using AdminPagosDLL.Models;
 using iTextSharp.text.pdf;
 using iTextSharp.text.pdf.parser;
-using System.IO;
-using System.Configuration;
 using Newtonsoft.Json;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Globalization;
+using System.IO;
+using System.Linq;
 
 namespace AdminPagosDLL.Core
 {
@@ -34,6 +35,30 @@ namespace AdminPagosDLL.Core
             if (File.Exists(oldXml))
                 try { File.Delete(oldXml); } catch { }
             return System.IO.Path.Combine(appData, "pagos_serializados.json");
+        }
+
+        private static DateTime? ObtenerFechaPdf(string fechaTxt)
+        {
+            if (string.IsNullOrEmpty(fechaTxt)) return null;
+
+            // 1. Sanitizamos la cadena: quitamos el prefijo "D:" y las comillas simples del offset
+            // "D:20190225182235-03'00'" -> "20190225182235-0300"
+            string textoLimpio = fechaTxt.Replace("D:", "").Replace("'", "");
+
+            // 2. Definimos los dos formatos posibles de metadatos PDF
+            string[] formatos = {
+                "yyyyMMddHHmmsszzz", // Con zona horaria (ej: 20190225182235-0300)
+                "yyyyMMddHHmmss"     // Sin zona horaria (ej: 20241104104351)
+            };
+
+            // 3. Parseamos usando DateTimeOffset para no perder la precisión horaria
+            if (DateTimeOffset.TryParseExact(textoLimpio, formatos, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTimeOffset resultadoOffset))
+            {
+                // Retornamos la fecha adaptada a la hora local del servidor
+                return resultadoOffset.LocalDateTime;
+            }
+
+            return null;
         }
 
         #region Metodos Públicos
@@ -158,7 +183,8 @@ namespace AdminPagosDLL.Core
                     //{
                     //    break;
                     //}
-                    if (path.Contains("2020-06-22 CEVIGE VTO"))
+                    if (path.Contains("2024-08-29 CLARO vto.18-9") ||
+                        path.Contains("2025-02-12 Ag. Bonaerenses vto"))
                     {
                         
                     }
@@ -174,7 +200,7 @@ namespace AdminPagosDLL.Core
 
                         continue;
                     }
-                    
+
                     string text = string.Empty;
                     
                     for (int page = 1; page < 2; page++)
@@ -182,58 +208,67 @@ namespace AdminPagosDLL.Core
                         bool leer = false;
                         text += PdfTextExtractor.GetTextFromPage(reader, page);
 
-                        //TODO: optimizar, en vez de iterar x las lineas y leerlas para compararlas -> usar "text.Contein(textoABuscar)"
-                        using (StringReader readerTxt = new StringReader(text))
+                        //----------------
+                        
+                        // Nueva version
+
+                        // Validar que el texto contenga alguna de las frases aprobadas para asegurarnos de que es un comprobante de pago
+                        var frasesOk = new List<string> { "pago efectuado", "pagos realizados", "operación realizada con éxito" };
+                        if (text != null && frasesOk.Any(frase => text.IndexOf(frase, StringComparison.OrdinalIgnoreCase) >= 0))
                         {
-                            string linea;
-                            bool identificoTipo = false;
-
-                            //Se crea el Pago en base al tipo de Pdf
-                            while ((linea = readerTxt.ReadLine()) != null && !identificoTipo)
+                            leer = true;
+                        }
+                        else
+                        {
+                            //TODO: optimizar, en vez de iterar x las lineas y leerlas para compararlas -> usar "text.Contein(textoABuscar)"
+                            using (StringReader readerTxt = new StringReader(text))
                             {
-                                if (String.IsNullOrEmpty(linea)) continue;
-                                
-                                switch (linea)
+                                string linea;
+                                bool identificoTipo = false;
+
+                                //Se crea el Pago en base al tipo de Pdf
+                                while ((linea = readerTxt.ReadLine()) != null && !identificoTipo)
                                 {
-                                    case "Pago efectuado":
-                                    case "Pago Efectuado":
-                                        //_pago = new PagoEfectuado();
-                                        leer = true;
-                                        identificoTipo = true;
-                                        break;
-                                    case "Pagos Realizados":
-                                        //_pago = new PagoRealizado();
-                                        leer = true;
-                                        identificoTipo = true;
-                                        break;
+                                    if (String.IsNullOrEmpty(linea)) continue;
 
-                                    //Las siguientes (x ahora) no se leen
+                                    switch (linea)
+                                    {
+                                        case "Pago efectuado":
+                                        case "Pago Efectuado":
+                                        case "Pagos Realizados":
+                                        case "Operación realizada con éxito":
+                                            leer = true;
+                                            identificoTipo = true;
+                                            break;
 
-                                    case "Transferencias a Cuentas de Tercero":
-                                        //TODO: función para Transferencias
-                                        leer = false;
-                                        identificoTipo = true;
-                                        break;
-                                    case "Detalle de Movimientos":
-                                        //TODO: función para Detalles de Movs del banco
-                                        leer = false;
-                                        identificoTipo = true;
-                                        break;
-                                        ;
-                                    default:
+                                        //Las siguientes (x ahora) no se leen
 
-                                        //Si es un recibo de sueldo de mamá, se busca el nro de legajo
-                                        if (linea.Contains("265014"))
-                                        {
+                                        case "Transferencias a Cuentas de Tercero":
+                                            //TODO: función para Transferencias
                                             leer = false;
                                             identificoTipo = true;
-                                        }
+                                            break;
+                                        case "Detalle de Movimientos":
+                                            //TODO: función para Detalles de Movs del banco
+                                            leer = false;
+                                            identificoTipo = true;
+                                            break;
+                                            ;
+                                        default:
 
-                                        break;
+                                            //Si es un recibo de sueldo de mamá, se busca el nro de legajo
+                                            if (linea.Contains("265014"))
+                                            {
+                                                leer = false;
+                                                identificoTipo = true;
+                                            }
+
+                                            break;
+                                    }
                                 }
                             }
                         }
-
+                        
                         if (!leer)
                         {
                             CantNoIdentificados++;
@@ -244,6 +279,7 @@ namespace AdminPagosDLL.Core
                         using (StringReader readerTxt = new StringReader(text))
                         {
                             var _pago = new Models.PagoEfectuado();
+                            _pago.Path = path;
 
                             string lineaAnterior = "";
                             string line;
@@ -252,6 +288,37 @@ namespace AdminPagosDLL.Core
                             string auxHora = "";
 
                             int cantLineas = 0;
+
+                            //----------------
+                            bool newFormatPdf = false;
+                            try
+                            {
+                                string textoOriginal = null;
+
+                                // 1. Intentamos leer "CreationDate". Si no existe, intentamos con "ModDate"
+                                if (!reader.Info.TryGetValue("CreationDate", out textoOriginal))
+                                {
+                                    reader.Info.TryGetValue("ModDate", out textoOriginal);
+                                }
+
+                                // 2. Al llegar acá, 'textoOriginal' tendrá el valor de la primera que haya encontrado,
+                                // o seguirá siendo 'null' si no existía ninguna de las dos en los metadatos.
+                                DateTime? fecha = ObtenerFechaPdf(textoOriginal);
+
+                                if (
+                                    text.Contains("Operación realizada con éxito")
+                                    //|| fecha.HasValue && fecha.Value.Year > 2022
+                                )
+                                {
+                                    newFormatPdf = true;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+
+                            }
+
+                            //----------------
 
                             while ((line = readerTxt.ReadLine()) != null)
                             {
@@ -264,7 +331,7 @@ namespace AdminPagosDLL.Core
                                 valor = lineaFormato.Count() > 1 ? lineaFormato[1] : "";
                                 valor = valor.Trim();
 
-                                switch (clave)
+                                switch (clave.Trim())
                                 {
                                     case "Fecha de Pago":
                                         auxFechaPago = valor;
@@ -293,6 +360,7 @@ namespace AdminPagosDLL.Core
                                         break;
                                     case "Código de seguridad":
                                     case "Código de Seguridad":
+                                    case "Cod. Pago":
 
                                         //Si es comprobante Simple
                                         if (!String.IsNullOrEmpty(valor))
@@ -306,42 +374,52 @@ namespace AdminPagosDLL.Core
 
                                         break;
                                     case "Nro de Cliente":
+                                    case "NRO. DE CLIENTE":
 
                                         _pago.NroCliente = valor;
 
-                                        if (!_pago.Ente.Contains("Lanus") &&
+                                        if (!String.IsNullOrEmpty(_pago.Ente))
+                                        {
+                                            if (!_pago.Ente.Contains("Lanus") &&
                                             _pago.Ente.Contains("Buenos Aires- Municipalidad de"))
-                                        { 
-                                        
+                                            {
+
+                                            }
+
+                                            //Si es comprobante Simple se completa el nombre del Ente
+                                            if (_pago.Ente.Equals("Buenos Aires- Municipalidad de"))
+                                            {
+                                                if (_pago.NroCliente.Equals("0000000000104243024")) // muni-Yrigoyen
+                                                {
+                                                    _pago.Ente += " Lanus";
+                                                }
+                                                if (_pago.NroCliente.Equals("0000000000445015012")) //muni-raquel
+                                                {
+                                                    _pago.Ente += " Lanus";
+                                                }
+                                                if (_pago.NroCliente.Equals("101122140030"))
+                                                {
+                                                    _pago.Ente += " Villa Gesell";
+                                                }
+                                            }
                                         }
 
-                                        //Si es comprobante Simple se completa el nombre del Ente
-                                        if (_pago.Ente.Equals("Buenos Aires- Municipalidad de"))
-                                        {
-                                            if (_pago.NroCliente.Equals("0000000000104243024")) // muni-Yrigoyen
-                                            {
-                                                _pago.Ente += " Lanus";
-                                            }
-                                            if (_pago.NroCliente.Equals("0000000000445015012")) //muni-raquel
-                                            {
-                                                _pago.Ente += " Lanus";
-                                            }
-                                            if (_pago.NroCliente.Equals("101122140030"))
-                                            {
-                                                _pago.Ente += " Villa Gesell";
-                                            }
-                                        }
+                                        
                                         break;
                                     case "Código/Usuario":
+                                    case "Codigo/Usuario":
                                         _pago.NroCliente = valor;
                                         break;
                                     case "Nro de cuenta débito":
+                                    case "Cuenta a debitar":
                                         _pago.NroCtaDebito = valor;
                                         break;
                                     case "Importe":
-                                        _pago.Importe = decimal.Parse(valor);
+                                    case "IMPORTE":
+                                        _pago.Importe = decimal.Parse(valor.Replace("$", ""));
                                         break;
                                     case "Fecha de Vencimiento":
+                                    case "VTO":
                                         //_pago.FechaVencimiento = format.CrearFecha(auxFechaPago);
                                         _pago.FechaVencimiento = format.CrearFecha(valor);
                                         break;
@@ -385,6 +463,19 @@ namespace AdminPagosDLL.Core
 
                                         break;
                                     default:
+
+                                        if (newFormatPdf)
+                                        {
+                                            if (lineaAnterior == "Operación realizada con éxito")
+                                            {
+                                                _pago.FechaPago = format.CrearFecha(line);
+                                            }
+                                            if (line.Contains("Nombre del Ente Abonado"))
+                                            {
+                                                _pago.Ente = line.Trim().Replace("Nombre del Ente Abonado: ", "");
+                                            }
+                                        }
+
                                         break;
                                 }
 
@@ -397,7 +488,7 @@ namespace AdminPagosDLL.Core
                                 switch (_pago.NroCliente.Trim())
                                 {
                                     //Pendientes de saber de quien son
-                                    case "20902705060": //Claro
+                                    case "20902705060": //Claro-Norma
                                     case "08620902705060": //Claro
                                     case "08620382717056": //Claro
                                         break;
@@ -416,7 +507,9 @@ namespace AdminPagosDLL.Core
 
                                     //VELEZ
                                     case "00100250089457": //Arba-Velez
+                                    case "00250089457": //Arba-Velez
                                     case "3860000616796": //Aysa-Velez
+                                    case "0000616796": //Aysa-Velez
                                     case "0001280445": //Edesur-Velez
                                     case "00901280445": //Edesur-Velez
                                     case "29820144117001": //Metrogas-Velez (antes que se saque en el '18)
@@ -464,8 +557,66 @@ namespace AdminPagosDLL.Core
                                         break;
                                 }
                             }
-                            
-                            //D:\Norma\000   PAGOS\18-08 - Arba NO SE.pdf
+                            else
+                            {
+                                var nombreArchivo = path.Split('\\').Last();
+
+                                if (_pago.Referencia == EReferencia.Desconocido)
+                                {
+                                    if (text.Contains("GESELL"))
+                                    {
+                                        _pago.Referencia = EReferencia.VillaGesell;
+                                    }
+
+                                    else if (text.Contains("UNGAR") ||
+                                        text.Contains("EDIFICIO SAN MARTIN"))
+                                    {
+                                        _pago.Referencia = EReferencia.VillaGesell;
+                                    }
+
+                                    else if (text.Contains("20902705060")
+                                        || nombreArchivo.ToLower().Contains("nico"))
+                                    {
+                                        _pago.Referencia = EReferencia.Nico;
+                                    }
+
+                                    else if (text.Contains("20902705060")
+                                        || nombreArchivo.ToLower().Contains("nico"))
+                                    {
+                                        _pago.Referencia = EReferencia.Nico;
+                                    }
+                                }
+                                
+
+                                if (String.IsNullOrEmpty(_pago.Ente))
+                                {
+                                    if (nombreArchivo.ToLower().Contains("bonaerenses"))
+                                    {
+                                        _pago.Ente = "Aguas BonaerenSes";
+                                    }
+
+                                    else if (nombreArchivo.ToLower().Contains("cevige"))
+                                    {
+                                        _pago.Ente = "Cevige";
+                                    }
+
+                                    else if (text.Contains("UNGAR") ||
+                                        text.Contains("EDIFICIO SAN MARTIN"))
+                                    {
+                                        _pago.Ente = "Adm. UNGAR";
+                                    }
+
+                                    else if (text.Contains("0001280445"))
+                                    {
+                                        _pago.Ente = "Edesur";
+                                    }
+                                }
+                            }
+
+                            if (_pago.Ente == "" || _pago.Referencia == EReferencia.Desconocido || _pago.Importe == 0)
+                            { 
+                                
+                            }
 
                             //Calcular valor en Dolares
                             var valCotizacion = (decimal)CotizacionHistorica.GetCotizacionPorFecha(_pago.FechaPago);
@@ -474,9 +625,6 @@ namespace AdminPagosDLL.Core
                                 _pago.ImporteDolar = decimal.Round(_pago.Importe / valCotizacion, 2);
                             }                            
                             
-
-                            _pago.Path = path;
-
                             if (_pago.FechaPago.Day == 7 && _pago.FechaPago.Month == 9)
                             { 
                             
