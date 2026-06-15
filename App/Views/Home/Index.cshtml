@@ -28,11 +28,11 @@
                 <p class="app-subtitle">Control centralizado de comprobantes, filtros y totales.</p>
             </div>
             <div class="topbar-actions">
-                <button id="themeToggle" class="btn btn-ghost" type="button" aria-pressed="false">
+                <button id="themeToggle" class="btn btn-ghost" type="button" aria-pressed="false" title="Alternar entre modo oscuro y claro">
                     <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.39 5.39 0 0 1-4.4 2.26 5.38 5.38 0 0 1-5.38-5.38 5.39 5.39 0 0 1 2.26-4.4A9.05 9.05 0 0 0 12 3Z"/></svg>
                     <span>Modo oscuro</span>
                 </button>
-                <button id="btnActualizarPdf" class="btn btn-primary" type="button">
+                <button id="btnActualizarPdf" class="btn btn-primary" type="button" title="Actualizar la lista de pagos desde los comprobantes PDF">
                     <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M1 4v6h6m16 10v-6h-6M3.51 15a9 9 0 0 0 14.85 3.36l-2.12-2.12a5.5 5.5 0 0 1-8.37-.74M20.49 9a9 9 0 0 0-14.85-3.36l2.12 2.12a5.5 5.5 0 0 1 8.37.74"/></svg>
                     <span>Actualizar pagos</span>
                 </button>
@@ -60,7 +60,7 @@
 
         <section class="toolbar" aria-label="Herramientas de vista">
             <div class="toolbar-left">
-                <button id="btnToggleFiltros" class="btn btn-secondary" type="button" aria-expanded="false" aria-controls="filtersPanel">
+                <button id="btnToggleFiltros" class="btn btn-secondary" type="button" aria-expanded="false" aria-controls="filtersPanel" title="Mostrar u ocultar el panel de filtros">
                     <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 21v-7m0-4V3m8 18v-9m0-4V3m8 18v-5m0-4V3M1 14h6m2-6h6m2 8h6"/></svg>
                     <span>Mostrar filtros</span>
                 </button>
@@ -113,11 +113,11 @@
                 </label>
             </div>
             <div class="filters-actions">
-                <button id="btnAplicarFiltros" class="btn btn-primary" type="button">
+                <button id="btnAplicarFiltros" class="btn btn-primary" type="button" title="Aplicar filtros avanzados">
                     <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/></svg>
                     <span>Aplicar</span>
                 </button>
-                <button id="btnLimpiarFiltros" class="btn btn-ghost" type="button">
+                <button id="btnLimpiarFiltros" class="btn btn-ghost" type="button" title="Limpiar todos los filtros">
                     <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M18 6 6 18M6 6l12 12"/></svg>
                     <span>Limpiar</span>
                 </button>
@@ -127,16 +127,16 @@
         <section class="table-section" aria-label="Listado de pagos">
             <div id="showHiddenCol" class="column-toggle">
                 <span>Columnas:</span>
-                <button class="toggle-vis" data-column="0" type="button">Nro Transaccion</button>
-                <button class="toggle-vis" data-column="1" type="button">Ente</button>
-                <button class="toggle-vis" data-column="2" type="button">Nº Cliente</button>
-                <button class="toggle-vis" data-column="3" type="button">Nº CtaDebito</button>
-                <button class="toggle-vis" data-column="4" type="button">Fecha Vto</button>
-                <button class="toggle-vis" data-column="5" type="button">Cuota</button>
-                <button class="toggle-vis" data-column="6" type="button">PDF</button>
-                <button class="toggle-vis" data-column="7" type="button">Tipo Comp</button>
-                <button class="toggle-vis" data-column="10" type="button">Importe USD</button>
-                <button class="toggle-vis" data-column="11" type="button">Referencia</button>
+                <button class="toggle-vis" data-column="0" type="button" title="Mostrar/ocultar Nro Transaccion">Nro Transaccion</button>
+                <button class="toggle-vis" data-column="1" type="button" title="Mostrar/ocultar Ente">Ente</button>
+                <button class="toggle-vis" data-column="2" type="button" title="Mostrar/ocultar Nº Cliente">Nº Cliente</button>
+                <button class="toggle-vis" data-column="3" type="button" title="Mostrar/ocultar Nº CtaDebito">Nº CtaDebito</button>
+                <button class="toggle-vis" data-column="4" type="button" title="Mostrar/ocultar Fecha Vto">Fecha Vto</button>
+                <button class="toggle-vis" data-column="5" type="button" title="Mostrar/ocultar Cuota">Cuota</button>
+                <button class="toggle-vis" data-column="6" type="button" title="Mostrar/ocultar PDF">PDF</button>
+                <button class="toggle-vis" data-column="7" type="button" title="Mostrar/ocultar Tipo Comp">Tipo Comp</button>
+                <button class="toggle-vis" data-column="10" type="button" title="Mostrar/ocultar Importe USD">Importe USD</button>
+                <button class="toggle-vis" data-column="11" type="button" title="Mostrar/ocultar Referencia">Referencia</button>
             </div>
 
             <div class="table-wrap">
@@ -183,12 +183,12 @@
         <div class="modal-panel">
             <header class="modal-header">
                 <h2>PDFs no procesados</h2>
-                <button id="modalFallosCerrar" class="modal-close" type="button" aria-label="Cerrar">&times;</button>
+                <button id="modalFallosCerrar" class="modal-close" type="button" aria-label="Cerrar" title="Cerrar ventana">&times;</button>
             </header>
             <div id="modalFallosBody" class="modal-body"></div>
             <footer class="modal-footer">
                 <span class="modal-hint">Hacé clic sobre un archivo para abrir su carpeta</span>
-                <button id="modalFallosCerrarBtn" class="btn btn-ghost" type="button">Cerrar</button>
+                <button id="modalFallosCerrarBtn" class="btn btn-ghost" type="button" title="Cerrar ventana de fallos">Cerrar</button>
             </footer>
         </div>
     </div>

@@ -136,12 +136,19 @@ html[data-theme='dark'] body {
     border: 1px solid var(--line);
     border-radius: 0.75rem;
     box-shadow: var(--shadow);
-    padding: 0.7rem 0.85rem;
+    padding: 0.4rem 0.7rem;
 }
 
 .stat-card-warn {
     background: color-mix(in srgb, var(--warning) 8%, var(--surface));
     border-color: var(--warning);
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-card-warn .stat-action {
+    align-self: flex-end;
+    margin-top: 0.15rem;
 }
 
 .stat-card-warn .stat-value {
@@ -364,14 +371,14 @@ html[data-theme='dark'] body {
 .stat-label {
     margin: 0;
     color: var(--muted);
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
 }
 
 .stat-value {
-    margin: 0.25rem 0 0;
-    font-size: clamp(0.95rem, 2vw, 1.35rem);
+    margin: 0.1rem 0 0;
+    font-size: clamp(0.85rem, 1.8vw, 1.2rem);
     font-weight: 700;
 }
 
@@ -669,8 +676,17 @@ table.dataTable.no-footer {
     flex-wrap: wrap;
 }
 
-.dataTables_wrapper > .dataTables_length,
-.dataTables_wrapper > .dataTables_filter,
+.dataTables_wrapper > .dataTables_length {
+    flex: 0 0 auto;
+    padding-top: 0.5rem;
+}
+
+.dataTables_wrapper > .dataTables_filter {
+    flex: 1 1 auto;
+    padding-top: 0.5rem;
+    text-align: right;
+}
+
 .dataTables_wrapper > .dataTables_scrollHead,
 .dataTables_wrapper > .dataTables_scrollBody,
 .dataTables_wrapper > .dataTables_scroll,
