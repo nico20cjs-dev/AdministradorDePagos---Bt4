@@ -342,30 +342,71 @@ html[data-theme='dark'] body {
 }
 
 .fallos-item {
-    padding: 0.4rem 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.5rem;
     border-radius: 0.4rem;
     background: var(--surface-2);
     color: var(--text);
-    font-size: 0.83rem;
-    font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
-    word-break: break-all;
-    cursor: pointer;
-    transition: background 0.12s, color 0.12s;
-}
-
-.fallos-item::after {
-    content: " \2197";
-    opacity: 0;
-    transition: opacity 0.12s;
+    cursor: default;
+    transition: background 0.12s;
 }
 
 .fallos-item:hover {
-    background: var(--accent);
-    color: #fff;
+    background: var(--surface-2);
+    color: var(--text);
 }
 
-.fallos-item:hover::after {
-    opacity: 0.7;
+.fallos-filename {
+    flex: 1 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+    font-size: 0.83rem;
+}
+
+.fallos-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--line);
+    border-radius: 0.35rem;
+    background: var(--surface);
+    color: var(--muted);
+    padding: 0.2rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+    width: 1.6rem;
+    height: 1.6rem;
+}
+
+.fallos-btn:hover {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+}
+
+.fallos-filtro-wrap {
+    margin-bottom: 0.75rem;
+}
+
+.fallos-filtro-input {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 0.5rem;
+    padding: 0.45rem 0.6rem;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.85rem;
+}
+
+.fallos-filtro-input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
 }
 
 .modal-hint {

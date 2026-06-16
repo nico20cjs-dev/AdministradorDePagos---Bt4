@@ -257,6 +257,9 @@ function renderFallosModal(data) {
         { key: 'noValPaths', label: 'Datos incompletos', icon: '\u26A0\uFE0F', count: data.noValPaths.length }
     ];
     var html = '';
+    html += '<div class="fallos-filtro-wrap">';
+    html += '<input type="text" id="fallosFiltro" class="fallos-filtro-input" placeholder="Filtrar archivos..." title="Filtrar archivos por nombre">';
+    html += '</div>';
     sections.forEach(function (sec) {
         var paths = data[sec.key] || [];
         var isEmpty = paths.length === 0;
@@ -275,13 +278,39 @@ function renderFallosModal(data) {
             paths.forEach(function (p) {
                 var name = fileNameFromPath(p);
                 var safePath = p.replace(/"/g, '&quot;');
-                html += '<li class="fallos-item" data-path="' + safePath + '" title="' + safePath + '">' + name + '</li>';
+                html += '<li class="fallos-item" data-path="' + safePath + '" title="' + safePath + '">';
+                html += '<button type="button" class="fallos-btn fallos-btn-dir" data-path="' + safePath + '" title="Abrir carpeta contenedora">';
+                html += '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v11z"/></svg>';
+                html += '</button>';
+                html += '<button type="button" class="fallos-btn fallos-btn-pdf" data-path="' + safePath + '" title="Abrir PDF en ventana nueva">';
+                html += '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3"/></svg>';
+                html += '</button>';
+                html += '<span class="fallos-filename">' + name + '</span>';
+                html += '</li>';
             });
             html += '</ul>';
         }
         html += '</div></div>';
     });
     $('#modalFallosBody').html(html);
+
+    var debounceFilterTimer;
+    $('#fallosFiltro').on('input', function () {
+        clearTimeout(debounceFilterTimer);
+        debounceFilterTimer = setTimeout(function () {
+            var q = this.value.toLowerCase();
+            $('#modalFallosBody .fallos-item').each(function () {
+                var name = $(this).find('.fallos-filename').text().toLowerCase();
+                $(this).toggle(name.indexOf(q) !== -1);
+            });
+            $('#modalFallosBody .fallos-section').each(function () {
+                var visibleItems = $(this).find('.fallos-item:visible').length;
+                var totalItems = $(this).find('.fallos-item').length;
+                if (totalItems === 0) return;
+                $(this).toggle(visibleItems > 0);
+            });
+        }.bind(this), 150);
+    });
 }
 
 function abrirModalFallos() {
@@ -350,8 +379,16 @@ $(document).ready(function () {
             }
         }
     });
-    $('#modalFallosBody').on('click', '.fallos-item', function () {
+    $('#modalFallosBody').on('click', '.fallos-btn-dir', function (e) {
+        e.stopPropagation();
         openFileFolder($(this).attr('data-path'));
+    });
+    $('#modalFallosBody').on('click', '.fallos-btn-pdf', function (e) {
+        e.stopPropagation();
+        var ruta = $(this).attr('data-path');
+        if (ruta) {
+            window.open('/Home/GetReport?path=' + encodeURIComponent(ruta), '_blank');
+        }
     });
     $('#modalFallosBody').on('click', '.fallos-section-title', function () {
         var section = $(this).closest('.fallos-section');

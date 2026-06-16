@@ -189,7 +189,7 @@ namespace AdminPagosDLL.Core
                     {
 
                     }
-                    if (nombreArchivo.Contains("2020-03-09 VG EXP vto.5-3 detalle"))
+                    if (nombreArchivo.Contains("2 0 2 3 -  EXPENSAS\\2023-01-02 Liquidacion Exp Dic.22 vto.5-1"))
                     {
                         
                     }
@@ -250,8 +250,10 @@ namespace AdminPagosDLL.Core
                         }
                         
                     }
+
                     if (nombreArchivo.ToLower().Contains("gesell")
-                        || nombreArchivo.ToLower().Contains(" vg "))
+                        || nombreArchivo.ToLower().Contains(" vg ")
+                        || (path.Contains("VILLA GESELL") && path.Contains("EXPENSAS")))
                     {
                         ifExpensasVG = true;
 
@@ -290,11 +292,18 @@ namespace AdminPagosDLL.Core
 
                         // Validar que el texto contenga alguna de las frases aprobadas para asegurarnos de que es un comprobante de pago
                         var frasesOk = new List<string> { "pago efectuado", "pagos realizados", "operación realizada con éxito", 
-                            "5º-A" , "metrogas", "San Rafael", "CONSORCIO DE COPROPIETARIOS EDIFICIO", "ungar"
+                            "5º-A" , "metrogas", "San Rafael", "CONSORCIO DE COPROPIETARIOS EDIFICIO", "ungar", "20382717056"
                         };
                         if (text != null && frasesOk.Any(frase => text.IndexOf(frase, StringComparison.OrdinalIgnoreCase) >= 0))
                         {
                             leer = true;
+
+                            //Omitir siguientes archivos
+                            if (nombreArchivo.Contains("historialPagosDetalle") ||
+                                nombreArchivo.Contains(" VISA.pdf"))
+                            {
+                                leer = false;
+                            }
                         }
                         else
                         {
@@ -729,6 +738,7 @@ namespace AdminPagosDLL.Core
 
                                     else if (text.Contains("2398966") ||
                                         text.Contains("30006245390") ||
+                                        text.Contains("20382717056") ||
                                         text.Contains("ADM San Rafael"))
                                     {
                                         _pago.Referencia = EReferencia.Norma;
@@ -753,6 +763,20 @@ namespace AdminPagosDLL.Core
                                     else if (nombreArchivo.ToLower().Contains("cevige"))
                                     {
                                         _pago.Ente = "Cevige";
+                                    }
+
+                                    else if (text.Contains("20382717056"))
+                                    {
+                                        _pago.Ente = "Claro";
+
+                                        if (_pago.Importe == 0)
+                                        {
+                                            var data = lineas.First(l => l.Contains("20382717056"));
+                                            var datas = data.Split(' ');
+                                            _pago.Importe = decimal.Parse(datas[1]);
+                                            _pago.FechaVencimiento = format.CrearFecha(datas[2]);
+                                            _pago.FechaPago = _pago.FechaVencimiento;
+                                        }
                                     }
 
                                     else if (text.Contains("UNGAR") ||
@@ -921,7 +945,7 @@ namespace AdminPagosDLL.Core
                                 }
                             }
 
-                            if (_pago.Ente == "" && _pago.Referencia == EReferencia.Desconocido && _pago.Importe == 0)
+                            if (_pago.Importe == 0)
                             { 
                                 
                             }

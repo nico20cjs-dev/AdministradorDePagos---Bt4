@@ -1,16 +1,10 @@
 Formateo Datos
- - Expresar el "Monto" con signo $
-
-BackEnd
-
-FrontEnd
- - Calcular el dolar de ese día
- - Actualizar la version del plugin dataTables
- - Hacer filtro de todos los campos
+ - Expresar el "Monto" con signo $ (sig pesos a la izq)
 
 Funciones
  - Informar cuantos pagos hay en cada sub-directorio
  - Tipificar cada pago Indicando a que Casa y/o Persona pertenece
+ - Evitar duplicidad de pagos cargados !!!
 
 __________________
 
