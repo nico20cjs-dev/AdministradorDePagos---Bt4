@@ -23,11 +23,19 @@
 <body>
     <main class="app-shell">
         <header class="topbar" aria-label="Encabezado principal">
-            <div>
+            <div class="topbar-left">
+                <button id="btnToggleFiltros" class="btn btn-secondary" type="button" aria-expanded="false" aria-controls="filtersPanel" title="Mostrar u ocultar el panel de filtros">
+                    <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 21v-7m0-4V3m8 18v-9m0-4V3m8 18v-5m0-4V3M1 14h6m2-6h6m2 8h6"/></svg>
+                    <span>Mostrar filtros</span>
+                </button>
+                <span id="loadState" class="load-state" aria-live="polite">Listo</span>
+                <div id="loadSpinner" class="spinner" aria-hidden="true"></div>
+            </div>
+            <div class="topbar-center">
                 <h1 class="app-title">Administrador de Pagos</h1>
                 <p class="app-subtitle">Control centralizado de comprobantes, filtros y totales.</p>
             </div>
-            <div class="topbar-actions">
+            <div class="topbar-right">
                 <button id="themeToggle" class="btn btn-ghost" type="button" aria-pressed="false" title="Alternar entre modo oscuro y claro">
                     <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.39 5.39 0 0 1-4.4 2.26 5.38 5.38 0 0 1-5.38-5.38 5.39 5.39 0 0 1 2.26-4.4A9.05 9.05 0 0 0 12 3Z"/></svg>
                     <span>Modo oscuro</span>
@@ -58,73 +66,67 @@
             </article>
         </section>
 
-        <section class="toolbar" aria-label="Herramientas de vista">
-            <div class="toolbar-left">
-                <button id="btnToggleFiltros" class="btn btn-secondary" type="button" aria-expanded="false" aria-controls="filtersPanel" title="Mostrar u ocultar el panel de filtros">
-                    <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 21v-7m0-4V3m8 18v-9m0-4V3m8 18v-5m0-4V3M1 14h6m2-6h6m2 8h6"/></svg>
-                    <span>Mostrar filtros</span>
-                </button>
-                <span id="loadState" class="load-state" aria-live="polite">Listo</span>
-                <div id="loadSpinner" class="spinner" aria-hidden="true"></div>
-            </div>
-        </section>
+        <div class="app-layout">
+            <aside id="filtersPanel" class="filters-sidebar is-collapsed" aria-label="Filtros de busqueda">
+                <div class="filters-sidebar-inner">
+                    <div class="filters-stack">
+                        <label class="field">
+                            <span>Importe desde</span>
+                            <input type="number" id="ImporteDesde" placeholder="0" min="0" step="0.01">
+                        </label>
+                        <label class="field">
+                            <span>Importe hasta</span>
+                            <input type="number" id="ImporteHasta" placeholder="0" min="0" step="0.01">
+                        </label>
+                        <label class="field">
+                            <span>Referencia</span>
+                            <select id="selectReference">
+                                <option value=""></option>
+                                <option value="0">-</option>
+                                <option value="1">Yrigoyen</option>
+                                <option value="2">Nico</option>
+                                <option value="3">Norma</option>
+                                <option value="4">Tia Raquel</option>
+                                <option value="5">Tia Renee</option>
+                                <option value="6">Velez Sarsfield</option>
+                                <option value="7">Villa Gesell</option>
+                            </select>
+                        </label>
+                        <label class="field">
+                            <span>Ente</span>
+                            <select id="selectEnte">
+                                <option value=""></option>
+                                <option value="Arba">Arba</option>
+                                <option value="Aguas Bonaerenses">(Agua) Aguas Bonaerenses</option>
+                                <option value="Agua y Saneamientos Argentinos">(Agua) AySA</option>
+                                <option value="Exp San Rafael">(Exp) Expensas Lanus</option>
+                                <option value="Exp Ungar">(Exp) Ungar VG</option>
+                                <option value="Edesur">(Luz) Edesur</option>
+                                <option value="Cevige">(Luz) Cevige</option>
+                                <option value="Metrogas">(Gas) Metrogas</option>
+                                <option value="Municipalidad de Lanus">(Municipal) Lanus</option>
+                                <option value="Municipalidad de Villa Gesell">(Municipal) Villa Gesell</option>
+                                <option value="Claro">(Telefonia) Claro</option>
+                                <option value="Movistar">(Telefonia) Movistar</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="filters-actions">
+                        <button id="btnAplicarFiltros" class="btn btn-primary" type="button" title="Aplicar filtros avanzados">
+                            <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/></svg>
+                            <span>Aplicar</span>
+                        </button>
+                        <button id="btnLimpiarFiltros" class="btn btn-ghost" type="button" title="Limpiar todos los filtros">
+                            <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M18 6 6 18M6 6l12 12"/></svg>
+                            <span>Limpiar</span>
+                        </button>
+                    </div>
+                </div>
+            </aside>
+            <div class="app-main">
+                <section id="contentMensajes" class="message-grid" aria-live="polite"></section>
 
-        <section id="contentMensajes" class="message-grid" aria-live="polite"></section>
-
-        <section id="filtersPanel" class="filters-panel is-collapsed" aria-label="Filtros de busqueda">
-            <div class="filters-grid">
-                <label class="field">
-                    <span>Importe desde</span>
-                    <input type="number" id="ImporteDesde" placeholder="0" min="0" step="0.01">
-                </label>
-                <label class="field">
-                    <span>Importe hasta</span>
-                    <input type="number" id="ImporteHasta" placeholder="0" min="0" step="0.01">
-                </label>
-                <label class="field">
-                    <span>Referencia</span>
-                    <select id="selectReference">
-                        <option value=""></option>
-                        <option value="0">-</option>
-                        <option value="1">Yrigoyen</option>
-                        <option value="2">Nico</option>
-                        <option value="3">Norma</option>
-                        <option value="4">Tia Raquel</option>
-                        <option value="5">Tia Renee</option>
-                        <option value="6">Velez Sarsfield</option>
-                        <option value="7">Villa Gesell</option>
-                    </select>
-                </label>
-                <label class="field field-wide">
-                    <span>Ente</span>
-                    <select id="selectEnte">
-                        <option value=""></option>
-                        <option value="Arba">Arba</option>
-                        <option value="Aguas Bonaerenses">(Agua) Aguas Bonaerenses</option>
-                        <option value="Agua y Saneamientos Argentinos">(Agua) AySA</option>
-                        <option value="Edesur">(Luz) Edesur</option>
-                        <option value="Cevige">(Luz) Cevige</option>
-                        <option value="Metrogas">(Gas) Metrogas</option>
-                        <option value="Municipalidad de Lanus">(Municipal) Lanus</option>
-                        <option value="Municipalidad de Villa Gesell">(Municipal) Villa Gesell</option>
-                        <option value="Claro">(Telefonia) Claro</option>
-                        <option value="Movistar">(Telefonia) Movistar</option>
-                    </select>
-                </label>
-            </div>
-            <div class="filters-actions">
-                <button id="btnAplicarFiltros" class="btn btn-primary" type="button" title="Aplicar filtros avanzados">
-                    <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/></svg>
-                    <span>Aplicar</span>
-                </button>
-                <button id="btnLimpiarFiltros" class="btn btn-ghost" type="button" title="Limpiar todos los filtros">
-                    <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M18 6 6 18M6 6l12 12"/></svg>
-                    <span>Limpiar</span>
-                </button>
-            </div>
-        </section>
-
-        <section class="table-section" aria-label="Listado de pagos">
+                <section class="table-section" aria-label="Listado de pagos">
             <div id="showHiddenCol" class="column-toggle">
                 <span>Columnas:</span>
                 <button class="toggle-vis" data-column="0" type="button" title="Mostrar/ocultar Nro Transaccion">Nro Transaccion</button>
@@ -177,6 +179,7 @@
                 </table>
             </div>
         </section>
+            </div>
     </main>
 
     <div id="modalFallos" class="modal-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Archivos no procesados">

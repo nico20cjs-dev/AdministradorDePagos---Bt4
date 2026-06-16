@@ -312,6 +312,16 @@ $(document).ready(function () {
         $(this).attr('aria-expanded', isCollapsed ? 'true' : 'false').attr('title', 'Mostrar u ocultar el panel de filtros').text(isCollapsed ? 'Ocultar filtros' : 'Mostrar filtros');
     });
 
+    $(document).on('click', function (e) {
+        if (window.innerWidth > 820) return;
+        var panel = $('#filtersPanel');
+        var toggle = $('#btnToggleFiltros');
+        if (!panel.hasClass('is-collapsed') && !$(e.target).closest('#filtersPanel, #btnToggleFiltros').length) {
+            panel.addClass('is-collapsed');
+            toggle.attr('aria-expanded', 'false').attr('title', 'Mostrar u ocultar el panel de filtros').text('Mostrar filtros');
+        }
+    });
+
     $('#btnAplicarFiltros').on('click', applyAdvancedFilters);
     $('#btnLimpiarFiltros').on('click', function () {
         $('#ImporteDesde').val('');
@@ -331,7 +341,14 @@ $(document).ready(function () {
         if (e.target === this) cerrarModalFallos();
     });
     $(document).on('keydown', function (e) {
-        if (e.key === 'Escape') cerrarModalFallos();
+        if (e.key === 'Escape') {
+            cerrarModalFallos();
+            var panel = $('#filtersPanel');
+            if (!panel.hasClass('is-collapsed')) {
+                panel.addClass('is-collapsed');
+                $('#btnToggleFiltros').attr('aria-expanded', 'false').attr('title', 'Mostrar u ocultar el panel de filtros').text('Mostrar filtros');
+            }
+        }
     });
     $('#modalFallosBody').on('click', '.fallos-item', function () {
         openFileFolder($(this).attr('data-path'));
@@ -386,7 +403,13 @@ $(document).ready(function () {
         },
         aoColumnDefs: [
             { bSortable: false, aTargets: [6] },
-            { sWidth: '120px', aTargets: [4, 8, 9, 10] }
+            { sWidth: '120px', aTargets: [4, 8, 9, 10] },
+            { targets: [9, 10], className: 'dt-right', render: function (data, type) {
+                if (type === 'display') {
+                    return new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(data || 0);
+                }
+                return data;
+            }}
         ],
         bAutoWidth: false,
         orderCellsTop: true,

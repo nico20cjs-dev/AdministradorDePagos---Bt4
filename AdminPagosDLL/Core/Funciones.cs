@@ -9,6 +9,8 @@ using System.Configuration;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace AdminPagosDLL.Core
 {
@@ -100,6 +102,8 @@ namespace AdminPagosDLL.Core
                 string rutaConfig = ConfigurationManager.AppSettings["RutaDePagos"];
                 directorio = !String.IsNullOrEmpty(rutaConfig) ? rutaConfig : defecto;
 
+                // Validaciones
+
                 try
                 {
                     var acces = Directory.GetAccessControl(directorio);
@@ -173,18 +177,19 @@ namespace AdminPagosDLL.Core
                 {
                     path = lstArchivos[i];
 
+                    string nombreArchivo = System.IO.Path.GetFileName(path);
+
                     // Skip archivos sin cambios si tenemos estado previo
                     if (hasCache && oldState != null && _fileTimestamps.TryGetValue(path, out var lastWrite) && lastWrite == File.GetLastWriteTimeUtc(path))
                     {
                         continue;
                     }
 
-                    //if (i == 120 || path.Contains("2020-06-22 CEVIGE VTO"))
-                    //{
-                    //    break;
-                    //}
-                    if (path.Contains("2024-08-29 CLARO vto.18-9") ||
-                        path.Contains("2025-02-12 Ag. Bonaerenses vto"))
+                    if (i == 991)
+                    {
+
+                    }
+                    if (nombreArchivo.Contains("2020-03-09 VG EXP vto.5-3 detalle"))
                     {
                         
                     }
@@ -202,18 +207,91 @@ namespace AdminPagosDLL.Core
                     }
 
                     string text = string.Empty;
-                    
-                    for (int page = 1; page < 2; page++)
+
+                    int pageRead = 1;
+                    int pageEnd = 2;
+
+                    bool ifExpensasHY = false;
+                    bool ifExpensasVG = false;
+                    if (nombreArchivo.ToLower().Contains("expensa") &&
+                        nombreArchivo.ToLower().Contains("san rafael"))
+                    {
+
+                        if (nombreArchivo.ToLower().Contains("movistar"))
+                        {
+
+                        }
+                        else
+                        {
+                            ifExpensasHY = true;
+
+                            if (reader.NumberOfPages == 1)
+                            {
+                                pageRead = 1;
+                                pageEnd = 2;
+                            }
+
+                            else if (reader.NumberOfPages == 4)
+                            {
+                                pageRead = 3;
+                                pageEnd = 4;
+                            }
+
+                            else if (reader.NumberOfPages == 5)
+                            {
+                                pageRead = 4;
+                                pageEnd = 5;
+                            }
+
+                            else
+                            {
+
+                            }
+                        }
+                        
+                    }
+                    if (nombreArchivo.ToLower().Contains("gesell")
+                        || nombreArchivo.ToLower().Contains(" vg "))
+                    {
+                        ifExpensasVG = true;
+
+                        if (reader.NumberOfPages == 1)
+                        {
+                            pageRead = 1;
+                            pageEnd = 2;
+                        }
+
+                        else if (reader.NumberOfPages == 3)
+                        {
+                            pageRead = 3;
+                            pageEnd = 4;
+                        }
+
+                        else if (reader.NumberOfPages == 4)
+                        {
+                            pageRead = 4;
+                            pageEnd = 5;
+                        }
+
+                        else
+                        {
+
+                        }
+                    }
+
+                    for (; pageRead < pageEnd; pageRead++)
                     {
                         bool leer = false;
-                        text += PdfTextExtractor.GetTextFromPage(reader, page);
+                        text += PdfTextExtractor.GetTextFromPage(reader, pageRead);
 
                         //----------------
                         
                         // Nueva version
 
                         // Validar que el texto contenga alguna de las frases aprobadas para asegurarnos de que es un comprobante de pago
-                        var frasesOk = new List<string> { "pago efectuado", "pagos realizados", "operación realizada con éxito" };
+                        var frasesOk = new List<string> { "pago efectuado", "pagos realizados", "operación realizada con éxito", 
+                            "5º-A" , "metrogas", "San Rafael", "CONSORCIO DE COPROPIETARIOS EDIFICIO", "ungar"
+                        };
                         if (text != null && frasesOk.Any(frase => text.IndexOf(frase, StringComparison.OrdinalIgnoreCase) >= 0))
                         {
                             leer = true;
@@ -331,8 +409,36 @@ namespace AdminPagosDLL.Core
                                 valor = lineaFormato.Count() > 1 ? lineaFormato[1] : "";
                                 valor = valor.Trim();
 
+                                if (ifExpensasHY)
+                                {
+                                    try
+                                    {
+                                        if (!clave.Contains("016"))
+                                        {
+                                            continue;
+                                        }
+
+                                        if (clave.Contains("016"))
+                                        {
+                                            var valores = clave.Split(' ');
+                                            _pago.Referencia = EReferencia.Norma;
+                                            _pago.Ente = "Exp San Rafael";
+
+                                            _pago.Importe = decimal.Parse(valores.Last().Replace("$", ""));                                            
+                                            _pago.FechaPago = format.CrearFecha(nombreArchivo.Split(' ').FirstOrDefault());
+                                            _pago.FechaVencimiento = _pago.FechaPago;
+                                            break;
+                                        }
+                                    }
+                                    catch (Exception )
+                                    {
+
+                                    }
+                                }
+
                                 switch (clave.Trim())
                                 {
+                                    case "Fecha de Transacción":
                                     case "Fecha de Pago":
                                         auxFechaPago = valor;
 
@@ -416,7 +522,23 @@ namespace AdminPagosDLL.Core
                                         break;
                                     case "Importe":
                                     case "IMPORTE":
-                                        _pago.Importe = decimal.Parse(valor.Replace("$", ""));
+
+                                        string patron = @"(?<transaccion>\$\s*\d+(?:\.\d{3})*,\d{2})\s+Número de transacción";
+
+                                        Match match = Regex.Match(text, patron, RegexOptions.IgnoreCase);
+
+                                        if (match.Success)
+                                        {
+                                            // Extrae el importe completo (ej: "$ 10.669,06")
+                                            string importeCompleto = match.Groups["transaccion"].Value;
+                                            _pago.Importe = decimal.Parse(importeCompleto.Replace("$", ""));
+                                        }
+                                        else
+                                        {
+                                            _pago.Importe = decimal.Parse(valor.Replace("$", ""));
+                                        }
+
+                                        
                                         break;
                                     case "Fecha de Vencimiento":
                                     case "VTO":
@@ -462,6 +584,21 @@ namespace AdminPagosDLL.Core
                                         }
 
                                         break;
+
+                                    case "Nombre Originante":
+                                        if (valor.Contains("NORMA D AQUILA"))
+                                        {
+                                            _pago.Referencia = EReferencia.Norma;
+                                        }
+                                        break;
+                                    case "Nombre del destinatario":
+
+                                        if (valor.Contains("CONSORCIO DE COPROPIETARIOS EDIFICIO"))
+                                        {
+                                            _pago.Ente = "Exp Ungar";
+                                        }
+                                        break;
+
                                     default:
 
                                         if (newFormatPdf)
@@ -559,7 +696,6 @@ namespace AdminPagosDLL.Core
                             }
                             else
                             {
-                                var nombreArchivo = path.Split('\\').Last();
 
                                 if (_pago.Referencia == EReferencia.Desconocido)
                                 {
@@ -585,11 +721,30 @@ namespace AdminPagosDLL.Core
                                     {
                                         _pago.Referencia = EReferencia.Nico;
                                     }
+
+                                    else if (text.Contains("30003392507"))
+                                    {
+                                        _pago.Referencia = EReferencia.TiaRaquel;
+                                    }
+
+                                    else if (text.Contains("2398966") ||
+                                        text.Contains("30006245390") ||
+                                        text.Contains("ADM San Rafael"))
+                                    {
+                                        _pago.Referencia = EReferencia.Norma;
+                                    }
+
+                                    else
+                                    {
+                                    
+                                    }
                                 }
                                 
 
                                 if (String.IsNullOrEmpty(_pago.Ente))
                                 {
+                                    string[] lineas = text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+
                                     if (nombreArchivo.ToLower().Contains("bonaerenses"))
                                     {
                                         _pago.Ente = "Aguas BonaerenSes";
@@ -603,17 +758,170 @@ namespace AdminPagosDLL.Core
                                     else if (text.Contains("UNGAR") ||
                                         text.Contains("EDIFICIO SAN MARTIN"))
                                     {
-                                        _pago.Ente = "Adm. UNGAR";
+                                        _pago.Ente = "Exp Ungar";
+
+                                        if (reader.NumberOfPages == 1)
+                                        {
+                                            if (_pago.Importe == 0)
+                                            {
+                                                foreach (var linea in lineas)
+                                                {
+                                                    if (linea.StartsWith("SALDO A PAGAR"))
+                                                    {
+                                                        //string patron = @"\$\s*(?<importe>\d+\.\d{2})";
+                                                        string patron = @"\$(?:\s|\u00A0)*(?<importe>\d+(?:,\d{3})*\.\d{2})";
+
+                                                        Match match = Regex.Match(linea, patron, RegexOptions.IgnoreCase);
+
+                                                        if (match.Success)
+                                                        {
+                                                            // Extrae el string del importe (ej: "10669.06")
+                                                            string importeString = match.Groups["importe"].Value;
+
+                                                            // Al tener formato internacional (punto para decimales), la conversión es directa con InvariantCulture
+                                                            decimal importeDecimal = Convert.ToDecimal(importeString, System.Globalization.CultureInfo.InvariantCulture);
+                                                            _pago.Importe = decimal.Parse(importeString.Replace("$", "").Replace(",", "").Replace(".", ","));
+                                                        }
+                                                        else
+                                                        { 
+                                                        
+                                                        }
+                                                        
+                                                        break;
+                                                    }
+                                                }
+
+                                            }
+
+                                            if (_pago.FechaVencimiento == new DateTime())
+                                            {
+                                                int star = text.IndexOf("SALDO A PAGAR AL");
+                                                if (star != -1)
+                                                {
+                                                    var fechaVto = text.Substring(star + 17, 10).Trim();
+                                                    _pago.FechaVencimiento = format.CrearFecha(fechaVto);
+                                                    _pago.FechaPago = _pago.FechaVencimiento;
+                                                }
+                                                else
+                                                {
+                                                    foreach (var fila in lineas)
+                                                    {
+                                                        if (fila.Contains("Fecha de la Transacció"))
+                                                        {
+                                                            string patron = @"Fecha de la Transacción:\s*(?<fecha>\d{2}/\d{2}/\d{4})";
+
+                                                            Match match = Regex.Match(text, patron, RegexOptions.IgnoreCase);
+
+                                                            if (match.Success)
+                                                            {
+                                                                _pago.FechaVencimiento = format.CrearFecha(match.Groups["fecha"].Value);
+                                                                _pago.FechaPago = _pago.FechaVencimiento;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+
+                                            }
+                                        }
+
+                                        else if (reader.NumberOfPages == 3 || reader.NumberOfPages == 4)
+                                        {
+                                            if (_pago.Importe == 0)
+                                            {
+
+                                                // 1. Dividimos el texto completo extraído por iTextSharp en líneas individuales
+                                                
+
+                                                string importeEncontrado = "0,00";
+
+                                                // 2. Buscamos el patrón exacto línea por línea
+                                                // ^\s*6\s+D'AQUILA de forma estricta al inicio de la fila
+                                                string patronImporte = @"(?<importe>\d+(?:\.\d{3})*,\d{2})\b\s*$";
+
+                                                foreach (string linea in lineas)
+                                                {
+                                                    // Verificamos si la línea actual pertenece al Dpto 6 de D'AQUILA
+                                                    if (linea.StartsWith("6 DPTO"))
+                                                    {
+                                                        // Una vez parados en la línea correcta, extraemos el ÚLTIMO importe de esa fila
+                                                        Match matchImporte = Regex.Match(linea, patronImporte);
+                                                        if (matchImporte.Success)
+                                                        {
+                                                            try
+                                                            {
+                                                                importeEncontrado = matchImporte.Groups["importe"].Value;
+                                                                _pago.Importe = decimal.Parse(importeEncontrado);
+                                                            }
+                                                            catch (Exception ex)
+                                                            {
+
+                                                            }
+                                                            break; // Ya lo encontramos, salimos del bucle
+                                                        }
+                                                        else
+                                                        { 
+                                                        
+                                                        }
+                                                        break;
+                                                    }
+                                                }
+                                            }
+
+                                            if (_pago.FechaVencimiento == new DateTime())
+                                            {
+                                                try
+                                                {
+                                                    int star = text.IndexOf("Vencimiento el día");
+                                                    var fechaVto = text.Substring(star + 19, 10).Trim();
+                                                    _pago.FechaVencimiento = format.CrearFecha(fechaVto);
+                                                    _pago.FechaPago = _pago.FechaVencimiento;
+                                                }
+                                                catch (Exception ex)
+                                                {
+
+                                                }
+                                            }
+                                        }
                                     }
 
                                     else if (text.Contains("0001280445"))
                                     {
                                         _pago.Ente = "Edesur";
                                     }
+
+                                    else if (text.Contains("2398966"))
+                                    {
+                                        _pago.Ente = "Telecentro";
+                                    }
+
+                                    else if (text.Contains("MetroGAS"))
+                                    {
+                                        _pago.Ente = "Metrogas";
+
+                                        if (_pago.Importe == 0)
+                                        {
+                                            int star = text.IndexOf("TOTAL A PAGAR");
+                                            var importe = (text.Length >= (star + 20)) ? text.Substring(star + 15, 10).Trim() : "Fuera de rango";
+                                            _pago.Importe = decimal.Parse(importe.Replace("$", ""));
+                                        }
+
+                                        if (_pago.FechaVencimiento == new DateTime())
+                                        {
+                                            int star = text.IndexOf("FECHA DE VENCIMIENTO");
+                                            var fechaVto = text.Substring(star + 22, 10).Trim();
+                                            _pago.FechaVencimiento = format.CrearFecha(fechaVto);
+                                            _pago.FechaPago = _pago.FechaVencimiento;
+                                        }
+                                    }
+
+                                    else if (text.Contains("ADM San Rafael"))
+                                    {
+                                        _pago.Ente = "Exp San Rafael";
+                                    }
                                 }
                             }
 
-                            if (_pago.Ente == "" || _pago.Referencia == EReferencia.Desconocido || _pago.Importe == 0)
+                            if (_pago.Ente == "" && _pago.Referencia == EReferencia.Desconocido && _pago.Importe == 0)
                             { 
                                 
                             }
@@ -661,7 +969,7 @@ namespace AdminPagosDLL.Core
                             }
 
                             //Si se cargaron datos válidos
-                            if (!String.IsNullOrEmpty(_pago.Ente) && _pago.FechaVencimiento != new DateTime() && _pago.Importe != 0)
+                            if (!String.IsNullOrEmpty(_pago.Ente) || _pago.FechaVencimiento != new DateTime() || _pago.Importe != 0)
                             {
                                 lstModelos.Add(_pago);
                             }
