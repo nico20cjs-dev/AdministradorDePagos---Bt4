@@ -627,7 +627,7 @@ html[data-theme='dark'] body {
 #dataTable td:nth-child(10),
 #dataTable td:nth-child(11) {
     text-align: right !important;
-    padding-right: 12px !important;
+    padding-right: 30px !important;
 }
 
 .pdf-link {
@@ -641,8 +641,9 @@ html[data-theme='dark'] body {
     cursor: pointer;
 }
 
-.dt-right {
+#dataTable td.dt-right {
     text-align: right !important;
+    padding-right: 30px !important;
 }
 
 .pointer {

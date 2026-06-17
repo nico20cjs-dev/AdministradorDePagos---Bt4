@@ -189,7 +189,7 @@ namespace AdminPagosDLL.Core
                     {
 
                     }
-                    if (nombreArchivo.Contains("2 0 2 3 -  EXPENSAS\\2023-01-02 Liquidacion Exp Dic.22 vto.5-1"))
+                    if (nombreArchivo.Contains("planilla de gastos.pdf"))
                     {
                         
                     }
@@ -251,7 +251,7 @@ namespace AdminPagosDLL.Core
                         
                     }
 
-                    if (nombreArchivo.ToLower().Contains("gesell")
+                    else if (nombreArchivo.ToLower().Contains("gesell")
                         || nombreArchivo.ToLower().Contains(" vg ")
                         || (path.Contains("VILLA GESELL") && path.Contains("EXPENSAS")))
                     {
@@ -526,6 +526,7 @@ namespace AdminPagosDLL.Core
                                         _pago.NroCliente = valor;
                                         break;
                                     case "Nro de cuenta débito":
+                                    case "NRO DE CUENTA":
                                     case "Cuenta a debitar":
                                         _pago.NroCtaDebito = valor;
                                         break;
@@ -554,6 +555,13 @@ namespace AdminPagosDLL.Core
                                         //_pago.FechaVencimiento = format.CrearFecha(auxFechaPago);
                                         _pago.FechaVencimiento = format.CrearFecha(valor);
                                         break;
+
+                                    case "FECHA VENCIMIENTO":
+                                        //_pago.FechaVencimiento = format.CrearFecha(auxFechaPago);
+                                        _pago.FechaVencimiento = format.CrearFecha(valor, "dd/MM/yy");
+                                        break;
+
+                                    case "CUOTA":
                                     case "Cuota":
                                     case "Cuota/Año":
                                         //006/17
@@ -619,6 +627,22 @@ namespace AdminPagosDLL.Core
                                             if (line.Contains("Nombre del Ente Abonado"))
                                             {
                                                 _pago.Ente = line.Trim().Replace("Nombre del Ente Abonado: ", "");
+                                            }
+                                            if (line.Contains("PAGO DE AGUAS BONAERENSES"))
+                                            {
+                                                _pago.Ente = "Aguas Bonaerenses";
+                                            }
+                                            if (line.Contains("Número de transacción"))
+                                            {
+                                                var f = new Formatos();
+                                                var resultado = f.CrearFecha(lineaAnterior);        // 10/11/2023 00:00:00
+                                                bool esValida = resultado != DateTime.MinValue;  // true
+                                                if (esValida)
+                                                {
+                                                    _pago.FechaPago = resultado;
+                                                    var valores = line.Split(' ');
+                                                    _pago.NroTransaccion = valores[valores.Length - 2];
+                                                }
                                             }
                                         }
 
@@ -694,7 +718,7 @@ namespace AdminPagosDLL.Core
                                     case "0001392230": //AguasBonaerences-Gesell
                                     case "00101250019153": //Arba-Gesell
                                     case "01250019153": //Arba-Gesell
-                                    case "0005820": //Cevige-Gesell
+                                    case "0005820": //Cevige-Gesell (Luz)
                                     case "101122140030": //Municipal-Gesell
                                     case "901043090065": //Municipal-Gesell
                                         _pago.Referencia = EReferencia.VillaGesell;
