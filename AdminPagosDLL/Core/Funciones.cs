@@ -189,7 +189,7 @@ namespace AdminPagosDLL.Core
                     {
 
                     }
-                    if (nombreArchivo.Contains("planilla de gastos.pdf"))
+                    if (path.Contains("ICIPAL Cl.101122140030\\2023-09-29 MUNICIPAL vto.12-10.pdf"))
                     {
                         
                     }
@@ -213,7 +213,17 @@ namespace AdminPagosDLL.Core
 
                     bool ifExpensasHY = false;
                     bool ifExpensasVG = false;
-                    if (nombreArchivo.ToLower().Contains("expensa") &&
+                    if (nombreArchivo.ToLower().Contains("flow"))
+                    {
+                        if (reader.NumberOfPages == 3)
+                        {
+                            pageRead = 1;
+                            pageEnd = 2;
+                        }
+
+                    }
+
+                    else if (nombreArchivo.ToLower().Contains("expensa") &&
                         nombreArchivo.ToLower().Contains("san rafael"))
                     {
 
@@ -279,6 +289,18 @@ namespace AdminPagosDLL.Core
                         {
 
                         }
+                    }
+
+                    else if (reader.NumberOfPages == 3)
+                    {
+                        pageRead = 3;
+                        pageEnd = 4;
+                    }
+
+                    else if (reader.NumberOfPages == 4)
+                    {
+                        pageRead = 4;
+                        pageEnd = 5;
                     }
 
                     for (; pageRead < pageEnd; pageRead++)
@@ -652,7 +674,7 @@ namespace AdminPagosDLL.Core
                                 lineaAnterior = line;
                             }
 
-                            //Setea la referencia, ej "Tia Raquel"; "Gesell"
+                            // Referencia
                             if (!String.IsNullOrEmpty(_pago.NroCliente))
                             {
                                 switch (_pago.NroCliente.Trim())
@@ -729,7 +751,6 @@ namespace AdminPagosDLL.Core
                             }
                             else
                             {
-
                                 if (_pago.Referencia == EReferencia.Desconocido)
                                 {
                                     if (text.Contains("GESELL"))
@@ -773,217 +794,284 @@ namespace AdminPagosDLL.Core
                                     
                                     }
                                 }
-                                
+                            }
 
-                                if (String.IsNullOrEmpty(_pago.Ente))
+                            if (String.IsNullOrEmpty(_pago.Ente))
+                            {
+                                string[] lineas = text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+                                if (nombreArchivo.ToLower().Contains("bonaerenses"))
                                 {
-                                    string[] lineas = text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+                                    _pago.Ente = "Aguas BonaerenSes";
+                                }
 
-                                    if (nombreArchivo.ToLower().Contains("bonaerenses"))
+                                else if (nombreArchivo.ToLower().Contains("cevige"))
+                                {
+                                    _pago.Ente = "Cevige";
+                                }
+
+                                else if (text.Contains("20382717056"))
+                                {
+                                    _pago.Ente = "Claro";
+
+                                    if (_pago.Importe == 0)
                                     {
-                                        _pago.Ente = "Aguas BonaerenSes";
+                                        var data = lineas.First(l => l.Contains("20382717056"));
+                                        var datas = data.Split(' ');
+                                        _pago.Importe = decimal.Parse(datas[1]);
+                                        _pago.FechaVencimiento = format.CrearFecha(datas[2]);
+                                        _pago.FechaPago = _pago.FechaVencimiento;
                                     }
+                                }
 
-                                    else if (nombreArchivo.ToLower().Contains("cevige"))
+                                else if (text.Contains("UNGAR") ||
+                                    text.Contains("EDIFICIO SAN MARTIN"))
+                                {
+                                    _pago.Ente = "Exp Ungar";
+
+                                    if (reader.NumberOfPages == 1)
                                     {
-                                        _pago.Ente = "Cevige";
-                                    }
-
-                                    else if (text.Contains("20382717056"))
-                                    {
-                                        _pago.Ente = "Claro";
-
                                         if (_pago.Importe == 0)
                                         {
-                                            var data = lineas.First(l => l.Contains("20382717056"));
-                                            var datas = data.Split(' ');
-                                            _pago.Importe = decimal.Parse(datas[1]);
-                                            _pago.FechaVencimiento = format.CrearFecha(datas[2]);
-                                            _pago.FechaPago = _pago.FechaVencimiento;
-                                        }
-                                    }
-
-                                    else if (text.Contains("UNGAR") ||
-                                        text.Contains("EDIFICIO SAN MARTIN"))
-                                    {
-                                        _pago.Ente = "Exp Ungar";
-
-                                        if (reader.NumberOfPages == 1)
-                                        {
-                                            if (_pago.Importe == 0)
+                                            foreach (var linea in lineas)
                                             {
-                                                foreach (var linea in lineas)
+                                                if (linea.StartsWith("SALDO A PAGAR"))
                                                 {
-                                                    if (linea.StartsWith("SALDO A PAGAR"))
+                                                    //string patron = @"\$\s*(?<importe>\d+\.\d{2})";
+                                                    string patron = @"\$(?:\s|\u00A0)*(?<importe>\d+(?:,\d{3})*\.\d{2})";
+
+                                                    Match match = Regex.Match(linea, patron, RegexOptions.IgnoreCase);
+
+                                                    if (match.Success)
                                                     {
-                                                        //string patron = @"\$\s*(?<importe>\d+\.\d{2})";
-                                                        string patron = @"\$(?:\s|\u00A0)*(?<importe>\d+(?:,\d{3})*\.\d{2})";
+                                                        // Extrae el string del importe (ej: "10669.06")
+                                                        string importeString = match.Groups["importe"].Value;
 
-                                                        Match match = Regex.Match(linea, patron, RegexOptions.IgnoreCase);
-
-                                                        if (match.Success)
-                                                        {
-                                                            // Extrae el string del importe (ej: "10669.06")
-                                                            string importeString = match.Groups["importe"].Value;
-
-                                                            // Al tener formato internacional (punto para decimales), la conversión es directa con InvariantCulture
-                                                            decimal importeDecimal = Convert.ToDecimal(importeString, System.Globalization.CultureInfo.InvariantCulture);
-                                                            _pago.Importe = decimal.Parse(importeString.Replace("$", "").Replace(",", "").Replace(".", ","));
-                                                        }
-                                                        else
-                                                        { 
-                                                        
-                                                        }
-                                                        
-                                                        break;
+                                                        // Al tener formato internacional (punto para decimales), la conversión es directa con InvariantCulture
+                                                        decimal importeDecimal = Convert.ToDecimal(importeString, System.Globalization.CultureInfo.InvariantCulture);
+                                                        _pago.Importe = decimal.Parse(importeString.Replace("$", "").Replace(",", "").Replace(".", ","));
                                                     }
-                                                }
-
-                                            }
-
-                                            if (_pago.FechaVencimiento == new DateTime())
-                                            {
-                                                int star = text.IndexOf("SALDO A PAGAR AL");
-                                                if (star != -1)
-                                                {
-                                                    var fechaVto = text.Substring(star + 17, 10).Trim();
-                                                    _pago.FechaVencimiento = format.CrearFecha(fechaVto);
-                                                    _pago.FechaPago = _pago.FechaVencimiento;
-                                                }
-                                                else
-                                                {
-                                                    foreach (var fila in lineas)
+                                                    else
                                                     {
-                                                        if (fila.Contains("Fecha de la Transacció"))
-                                                        {
-                                                            string patron = @"Fecha de la Transacción:\s*(?<fecha>\d{2}/\d{2}/\d{4})";
 
-                                                            Match match = Regex.Match(text, patron, RegexOptions.IgnoreCase);
-
-                                                            if (match.Success)
-                                                            {
-                                                                _pago.FechaVencimiento = format.CrearFecha(match.Groups["fecha"].Value);
-                                                                _pago.FechaPago = _pago.FechaVencimiento;
-                                                            }
-                                                        }
                                                     }
-                                                }
 
-                                            }
-                                        }
-
-                                        else if (reader.NumberOfPages == 3 || reader.NumberOfPages == 4)
-                                        {
-                                            if (_pago.Importe == 0)
-                                            {
-
-                                                // 1. Dividimos el texto completo extraído por iTextSharp en líneas individuales
-                                                
-
-                                                string importeEncontrado = "0,00";
-
-                                                // 2. Buscamos el patrón exacto línea por línea
-                                                // ^\s*6\s+D'AQUILA de forma estricta al inicio de la fila
-                                                string patronImporte = @"(?<importe>\d+(?:\.\d{3})*,\d{2})\b\s*$";
-
-                                                foreach (string linea in lineas)
-                                                {
-                                                    // Verificamos si la línea actual pertenece al Dpto 6 de D'AQUILA
-                                                    if (linea.StartsWith("6 DPTO"))
-                                                    {
-                                                        // Una vez parados en la línea correcta, extraemos el ÚLTIMO importe de esa fila
-                                                        Match matchImporte = Regex.Match(linea, patronImporte);
-                                                        if (matchImporte.Success)
-                                                        {
-                                                            try
-                                                            {
-                                                                importeEncontrado = matchImporte.Groups["importe"].Value;
-                                                                _pago.Importe = decimal.Parse(importeEncontrado);
-                                                            }
-                                                            catch (Exception ex)
-                                                            {
-
-                                                            }
-                                                            break; // Ya lo encontramos, salimos del bucle
-                                                        }
-                                                        else
-                                                        { 
-                                                        
-                                                        }
-                                                        break;
-                                                    }
+                                                    break;
                                                 }
                                             }
 
-                                            if (_pago.FechaVencimiento == new DateTime())
-                                            {
-                                                try
-                                                {
-                                                    int star = text.IndexOf("Vencimiento el día");
-                                                    var fechaVto = text.Substring(star + 19, 10).Trim();
-                                                    _pago.FechaVencimiento = format.CrearFecha(fechaVto);
-                                                    _pago.FechaPago = _pago.FechaVencimiento;
-                                                }
-                                                catch (Exception ex)
-                                                {
-
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    else if (text.Contains("0001280445"))
-                                    {
-                                        _pago.Ente = "Edesur";
-                                    }
-
-                                    else if (text.Contains("2398966"))
-                                    {
-                                        _pago.Ente = "Telecentro";
-                                    }
-
-                                    else if (text.Contains("MetroGAS"))
-                                    {
-                                        _pago.Ente = "Metrogas";
-
-                                        if (_pago.Importe == 0)
-                                        {
-                                            int star = text.IndexOf("TOTAL A PAGAR");
-                                            var importe = (text.Length >= (star + 20)) ? text.Substring(star + 15, 10).Trim() : "Fuera de rango";
-                                            _pago.Importe = decimal.Parse(importe.Replace("$", ""));
                                         }
 
                                         if (_pago.FechaVencimiento == new DateTime())
                                         {
-                                            int star = text.IndexOf("FECHA DE VENCIMIENTO");
-                                            var fechaVto = text.Substring(star + 22, 10).Trim();
-                                            _pago.FechaVencimiento = format.CrearFecha(fechaVto);
-                                            _pago.FechaPago = _pago.FechaVencimiento;
+                                            int star = text.IndexOf("SALDO A PAGAR AL");
+                                            if (star != -1)
+                                            {
+                                                var fechaVto = text.Substring(star + 17, 10).Trim();
+                                                _pago.FechaVencimiento = format.CrearFecha(fechaVto);
+                                                _pago.FechaPago = _pago.FechaVencimiento;
+                                            }
+                                            else
+                                            {
+                                                foreach (var fila in lineas)
+                                                {
+                                                    if (fila.Contains("Fecha de la Transacció"))
+                                                    {
+                                                        string patron = @"Fecha de la Transacción:\s*(?<fecha>\d{2}/\d{2}/\d{4})";
+
+                                                        Match match = Regex.Match(text, patron, RegexOptions.IgnoreCase);
+
+                                                        if (match.Success)
+                                                        {
+                                                            _pago.FechaVencimiento = format.CrearFecha(match.Groups["fecha"].Value);
+                                                            _pago.FechaPago = _pago.FechaVencimiento;
+                                                        }
+                                                    }
+                                                }
+
+                                                if (_pago.FechaVencimiento == new DateTime())
+                                                {
+                                                    _pago.FechaVencimiento = _pago.FechaPago;
+                                                }
+                                            }
+
                                         }
                                     }
 
-                                    else if (text.Contains("ADM San Rafael"))
+                                    else if (reader.NumberOfPages == 3 || reader.NumberOfPages == 4)
                                     {
-                                        _pago.Ente = "Exp San Rafael";
+                                        if (_pago.Importe == 0)
+                                        {
+
+                                            // 1. Dividimos el texto completo extraído por iTextSharp en líneas individuales
+
+
+                                            string importeEncontrado = "0,00";
+
+                                            // 2. Buscamos el patrón exacto línea por línea
+                                            // ^\s*6\s+D'AQUILA de forma estricta al inicio de la fila
+                                            string patronImporte = @"(?<importe>\d+(?:\.\d{3})*,\d{2})\b\s*$";
+
+                                            foreach (string linea in lineas)
+                                            {
+                                                // Verificamos si la línea actual pertenece al Dpto 6 de D'AQUILA
+                                                if (linea.StartsWith("6 DPTO"))
+                                                {
+                                                    // Una vez parados en la línea correcta, extraemos el ÚLTIMO importe de esa fila
+                                                    Match matchImporte = Regex.Match(linea, patronImporte);
+                                                    if (matchImporte.Success)
+                                                    {
+                                                        try
+                                                        {
+                                                            importeEncontrado = matchImporte.Groups["importe"].Value;
+                                                            _pago.Importe = decimal.Parse(importeEncontrado);
+                                                        }
+                                                        catch (Exception ex)
+                                                        {
+
+                                                        }
+                                                        break; // Ya lo encontramos, salimos del bucle
+                                                    }
+                                                    else
+                                                    {
+
+                                                    }
+                                                    break;
+                                                }
+                                            }
+                                        }
+
+                                        if (_pago.FechaVencimiento == new DateTime())
+                                        {
+                                            foreach (string linea in lineas)
+                                            {
+                                                // Verificamos si la línea actual pertenece al Dpto 6 de D'AQUILA
+                                                if (linea.Contains("Vencimiento el día"))
+                                                {
+                                                    var fechaVto = linea.Split(' ').Last();
+                                                    _pago.FechaVencimiento = format.CrearFecha(fechaVto);
+                                                    _pago.FechaPago = _pago.FechaVencimiento;
+                                                    break;
+                                                }
+                                            }
+                                        }
                                     }
+                                }
+
+                                else if (text.Contains("0001280445"))
+                                {
+                                    _pago.Ente = "Edesur";
+                                }
+
+                                else if (text.Contains("2398966"))
+                                {
+                                    _pago.Ente = "Telecentro";
+                                }
+
+                                else if (text.Contains("MetroGAS"))
+                                {
+                                    _pago.Ente = "Metrogas";
+
+                                    if (_pago.Importe == 0)
+                                    {
+                                        int star = text.IndexOf("TOTAL A PAGAR");
+                                        var importe = (text.Length >= (star + 20)) ? text.Substring(star + 15, 10).Trim() : "Fuera de rango";
+                                        _pago.Importe = decimal.Parse(importe.Replace("$", ""));
+                                    }
+
+                                    if (_pago.FechaVencimiento == new DateTime())
+                                    {
+                                        int star = text.IndexOf("FECHA DE VENCIMIENTO");
+                                        var fechaVto = text.Substring(star + 22, 10).Trim();
+                                        _pago.FechaVencimiento = format.CrearFecha(fechaVto);
+                                        _pago.FechaPago = _pago.FechaVencimiento;
+                                    }
+                                }
+
+                                else if (text.Contains("ADM San Rafael"))
+                                {
+                                    _pago.Ente = "Exp San Rafael";
+
+                                    if (_pago.FechaPago == new DateTime())
+                                    {
+                                        foreach (var linea in lineas)
+                                        {
+                                            if (linea.StartsWith("MES DE VENCIMIENTO DE LAS EXPENSA"))
+                                            {
+                                                var partes = linea.Split(':');
+
+                                                if (partes.Length > 1)
+                                                {
+                                                    var textoFecha = partes[1].Trim(); // "Enero 2026"
+
+                                                    DateTime fecha;
+
+                                                    if (DateTime.TryParseExact(
+                                                        "05 " + textoFecha,
+                                                        "dd MMMM yyyy",
+                                                        new System.Globalization.CultureInfo("es-AR"),
+                                                        System.Globalization.DateTimeStyles.None,
+                                                        out fecha))
+                                                    {
+                                                        _pago.FechaPago = fecha;
+                                                        _pago.FechaVencimiento = fecha;
+                                                    }
+                                                }
+
+                                                break;
+                                            }
+
+                                            if (linea.StartsWith("1er Vencimiento"))
+                                            {
+                                                var match = Regex.Match(
+                                                    linea,
+                                                    @"(\d{2}/\d{2}/\d{4})\s+([\d\.]+,\d{2})"
+                                                );
+
+                                                if (match.Success)
+                                                {
+                                                    DateTime fechaVencimiento;
+                                                    decimal importe;
+
+                                                    if (DateTime.TryParseExact(
+                                                            match.Groups[1].Value,
+                                                            "dd/MM/yyyy",
+                                                            CultureInfo.InvariantCulture,
+                                                            DateTimeStyles.None,
+                                                            out fechaVencimiento)
+                                                        &&
+                                                        decimal.TryParse(
+                                                            match.Groups[2].Value,
+                                                            NumberStyles.Number,
+                                                            new CultureInfo("es-AR"),
+                                                            out importe))
+                                                    {
+                                                        // Resultado
+                                                        _pago.FechaVencimiento = fechaVencimiento;
+                                                        _pago.FechaPago = fechaVencimiento;
+                                                        _pago.Importe = importe;
+
+                                                        // Ejemplo:
+                                                        // fechaVencimiento = 15/04/2026
+                                                        // importe = 173579.16
+                                                    }
+                                                }
+
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                else if (text.Contains("101122140030"))
+                                {
+                                    _pago.Ente = "Municipalidad de Villa Gesell";
                                 }
                             }
 
                             if (_pago.Importe == 0)
                             { 
                                 
-                            }
-
-                            //Calcular valor en Dolares
-                            var valCotizacion = (decimal)CotizacionHistorica.GetCotizacionPorFecha(_pago.FechaPago);
-                            if (valCotizacion != 0)
-                            {
-                                _pago.ImporteDolar = decimal.Round(_pago.Importe / valCotizacion, 2);
-                            }                            
-                            
-                            if (_pago.FechaPago.Day == 7 && _pago.FechaPago.Month == 9)
-                            { 
-                            
                             }
 
                             if (cantLineas > 8)
@@ -1016,10 +1104,61 @@ namespace AdminPagosDLL.Core
                                 }
                             }
 
+                            // Cotización en Dolares
+                            var valCotizacion = (decimal)CotizacionHistorica.GetCotizacionPorFecha(_pago.FechaPago);
+                            valCotizacion = valCotizacion != 0 ? valCotizacion : (decimal)CotizacionHistorica.GetCotizacionPorFecha(_pago.FechaVencimiento);
+                            valCotizacion = valCotizacion != 0 ? valCotizacion : (decimal)CotizacionHistorica.GetCotizacionAnterior(_pago.FechaPago);
+
+                            if (valCotizacion != 0)
+                            {
+                                _pago.ImporteDolar = decimal.Round(_pago.Importe / valCotizacion, 2);
+                            }
+                            else
+                            {
+                                // Si no se encontró cotización de ese día
+
+                                if (_pago.Referencia == EReferencia.VillaGesell)
+                                { 
+                                
+                                }
+                            }
+
+
+                            if (_pago.Ente == "Agua y Saneamientos Argentinos")
+                            {
+                                _pago.Ente = "AySA";
+                            }
+
+                            else if (_pago.Ente == "Buenos Aires- Municipalidad de Villa Gesell")
+                            {
+                                _pago.Ente = "Municipalidad de Villa Gesell";
+                            }
+
+                            else if (_pago.Ente == "Buenos Aires- Municipalidad de Lanus")
+                            {
+                                _pago.Ente = "Municipalidad de Lanus";
+                            }
+
                             //Si se cargaron datos válidos
                             if (!String.IsNullOrEmpty(_pago.Ente) || _pago.FechaVencimiento != new DateTime() || _pago.Importe != 0)
                             {
-                                lstModelos.Add(_pago);
+
+                                // Valida que no haya otro similar
+                                bool existeSimilar = lstModelos.Any(p =>
+                                    ((PagoEfectuado)p).Ente == _pago.Ente &&
+                                    ((PagoEfectuado)p).Referencia == _pago.Referencia &&
+                                    ((PagoEfectuado)p).FechaVencimiento == _pago.FechaVencimiento &&
+                                    ((PagoEfectuado)p).Importe == _pago.Importe
+                                    );
+
+                                if (!existeSimilar)
+                                {
+                                    lstModelos.Add(_pago);
+                                }
+                                else
+                                { 
+                                
+                                }
                             }
                             else
                             {

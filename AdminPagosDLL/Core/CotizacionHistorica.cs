@@ -36,5 +36,38 @@ namespace AdminPagosDLL.Core
             return CacheBD.TryGetValue(fecha, out double cotizacion) ? cotizacion : 0;
         }
 
+        /// <summary>
+        /// Obtiene la cotización para la primera fecha inmediatamente anterior con valor
+        /// a partir de una fecha dada. Si no existe ninguna fecha anterior, devuelve 0.
+        /// </summary>
+        public static double GetCotizacionAnterior(DateTime fecha)
+        {
+            if (fecha == new DateTime()) return 0;
+
+            string fechaStr = fecha.ToString("yyyy-MM-dd");
+
+            // Intento exacto primero
+            if (CacheBD.TryGetValue(fechaStr, out double cotizacion))
+                return cotizacion;
+
+            // Busca la fecha más cercana anterior en el diccionario
+            string anterior = null;
+            foreach (var key in CacheBD.Keys)
+            {
+                if (string.Compare(key, fechaStr, StringComparison.Ordinal) < 0)
+                {
+                    if (anterior == null || string.Compare(key, anterior, StringComparison.Ordinal) > 0)
+                    {
+                        anterior = key;
+                    }
+                }
+            }
+
+            if (anterior != null && CacheBD.TryGetValue(anterior, out cotizacion))
+                return cotizacion;
+
+            return 0;
+        }
+
     }
 }
