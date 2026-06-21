@@ -147,12 +147,54 @@ html[data-theme='dark'] body {
     margin-bottom: 0.6rem;
 }
 
+.stats-grid-ref {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 0.45rem;
+    margin-bottom: 0.7rem;
+}
+
+.stats-ref-empty {
+    grid-column: 1 / -1;
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-style: italic;
+    margin: 0;
+}
+
 .stat-card {
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 0.75rem;
     box-shadow: var(--shadow);
     padding: 0.4rem 0.7rem;
+}
+
+.stat-card-ref {
+    padding: 0.35rem 0.6rem;
+    border-radius: 0.65rem;
+}
+
+.stat-card-ref .stat-label {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.stat-value-ref-ars {
+    margin: 0.05rem 0 0;
+    font-size: clamp(0.78rem, 1.5vw, 1rem);
+    font-weight: 700;
+    color: var(--text);
+}
+
+.stat-value-ref-usd {
+    margin: -0.05rem 0 0;
+    font-size: clamp(0.68rem, 1.3vw, 0.88rem);
+    font-weight: 600;
+    color: var(--muted);
 }
 
 .stat-card-warn {
@@ -849,6 +891,9 @@ table.dataTable.no-footer {
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
     }
+    .stats-grid-ref {
+        grid-template-columns: repeat(3, 1fr);
+    }
 }
 
 @media (max-width: 700px) {
@@ -881,6 +926,9 @@ table.dataTable.no-footer {
 
     .stats-grid {
         grid-template-columns: 1fr;
+    }
+    .stats-grid-ref {
+        grid-template-columns: repeat(2, 1fr);
     }
 
     .column-toggle {

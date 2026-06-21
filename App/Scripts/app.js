@@ -138,19 +138,56 @@ function getStringReference(nroRerence) {
     }
 }
 
+var REFERENCIAS = [
+    { key: 'Yrigoyen',       icon: '\uD83C\uDFE0' },
+    { key: 'Norma',          icon: '\uD83D\uDC64' },
+    { key: 'Nico',           icon: '\uD83D\uDC64' },
+    { key: 'Tia Raquel',     icon: '\uD83D\uDC64' },
+    { key: 'Tia Renee',      icon: '\uD83D\uDC64' },
+    { key: 'Velez Sarsfield',icon: '\uD83C\uDFE0' },
+    { key: 'Villa Gesell',   icon: '\uD83C\uDFD6\uFE0F' },
+];
+
+function renderRefCards(totals) {
+    var html = '';
+    REFERENCIAS.forEach(function (r) {
+        var t = totals[r.key];
+        if (!t.ars && !t.usd) return;
+        html += '<article class="stat-card stat-card-ref">';
+        html += '<p class="stat-label">' + r.icon + ' ' + r.key + '</p>';
+        html += '<p class="stat-value-ref-ars">' + formatArs(t.ars) + '</p>';
+        html += '<p class="stat-value-ref-usd">' + formatUsd(t.usd) + '</p>';
+        html += '</article>';
+    });
+    $('.stats-grid-ref').html(html || '<p class="stats-ref-empty">Sin datos</p>');
+}
+
 function totalizarPagos() {
     var dt = $('#dataTable').dataTable().api();
     var rows = dt.rows({ search: 'applied' }).data();
     var totalPesos = 0;
     var totalDolares = 0;
+    var refTotals = {};
+
+    REFERENCIAS.forEach(function (r) { refTotals[r.key] = { ars: 0, usd: 0 }; });
 
     rows.each(function (item) {
-        totalPesos += Number(item[9]) || 0;
-        totalDolares += Number(item[10]) || 0;
+        var importe = Number(item[9]) || 0;
+        var importeUsd = Number(item[10]) || 0;
+        totalPesos += importe;
+        totalDolares += importeUsd;
+
+        var ref = (item[11] || '').toString();
+        if (refTotals[ref]) {
+            refTotals[ref].ars += importe;
+            refTotals[ref].usd += importeUsd;
+        }
     });
 
     $('#pesosCalculados').text(formatArs(totalPesos));
     $('#dolaresCalculados').text(formatUsd(totalDolares));
+
+    renderRefCards(refTotals);
 }
 
 function leerPdf(action) {
@@ -480,6 +517,8 @@ $(document).ready(function () {
                         }
                     }.bind(this), 300);
                 });
+                // Sincronizar el input con la búsqueda restaurada por stateSave
+                $('input', this.footer()).val(that.search());
             });
         }
     });

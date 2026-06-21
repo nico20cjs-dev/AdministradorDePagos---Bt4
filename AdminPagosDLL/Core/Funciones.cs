@@ -189,7 +189,7 @@ namespace AdminPagosDLL.Core
                     {
 
                     }
-                    if (path.Contains("ICIPAL Cl.101122140030\\2023-09-29 MUNICIPAL vto.12-10.pdf"))
+                    if (path.Contains("MAS PAGOS\\agendaPagosLink (1).pdf"))
                     {
                         
                     }
@@ -316,7 +316,11 @@ namespace AdminPagosDLL.Core
                         var frasesOk = new List<string> { "pago efectuado", "pagos realizados", "operación realizada con éxito", 
                             "5º-A" , "metrogas", "San Rafael", "CONSORCIO DE COPROPIETARIOS EDIFICIO", "ungar", "20382717056"
                         };
-                        if (text != null && frasesOk.Any(frase => text.IndexOf(frase, StringComparison.OrdinalIgnoreCase) >= 0))
+                        var frasesOmitir = new List<string> { "Agenda de Pagos" };
+                        if (text != null && 
+                            frasesOk.Any(frase => text.IndexOf(frase, StringComparison.OrdinalIgnoreCase) >= 0) &&
+                            !frasesOmitir.Any(frase => text.IndexOf(frase, StringComparison.OrdinalIgnoreCase) >= 0)
+                            )
                         {
                             leer = true;
 
