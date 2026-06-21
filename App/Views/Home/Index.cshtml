@@ -56,6 +56,12 @@
                 <p class="stat-label">Total en Dolares</p>
                 <p id="dolaresCalculados" class="stat-value">USD 0.00</p>
             </article>
+            <article class="stat-card">
+                <p class="stat-label">USD Actualizados
+                    <button id="btnInfoUsdActualizado" class="info-btn" type="button" title="¿Qué significa USD Actualizados?">ⓘ</button>
+                </p>
+                <p id="dolaresActualizadosCalculados" class="stat-value-usd-actualizado">USD 0.00</p>
+            </article>
             <article class="stat-card stat-card-warn">
                 <p class="stat-label">No procesados</p>
                 <p id="noProcesados" class="stat-value">0</p>
@@ -131,7 +137,8 @@
                 <button class="toggle-vis" data-column="6" type="button" title="Mostrar/ocultar PDF">PDF</button>
                 <button class="toggle-vis" data-column="7" type="button" title="Mostrar/ocultar Tipo Comp">Tipo Comp</button>
                 <button class="toggle-vis" data-column="10" type="button" title="Mostrar/ocultar Importe USD">Importe USD</button>
-                <button class="toggle-vis" data-column="11" type="button" title="Mostrar/ocultar Referencia">Referencia</button>
+                <button class="toggle-vis" data-column="11" type="button" title="Mostrar/ocultar USD Actualizados">USD Actualizados</button>
+                <button class="toggle-vis" data-column="12" type="button" title="Mostrar/ocultar Referencia">Referencia</button>
             </div>
 
             <div class="table-wrap">
@@ -149,6 +156,7 @@
                             <th>Fecha Pago</th>
                             <th>Importe $</th>
                             <th>Importe USD</th>
+                            <th>USD Actualizados</th>
                             <th>Referencia</th>
                         </tr>
                     </thead>
@@ -166,6 +174,7 @@
                             <th>Fecha Pago</th>
                             <th>Importe $</th>
                             <th>Importe USD</th>
+                            <th>USD Actualizados</th>
                             <th>Referencia</th>
                         </tr>
                     </tfoot>
@@ -209,6 +218,43 @@
             </div>
             <footer class="modal-footer">
                 <button id="modalDetalleCerrarBtn" class="btn btn-ghost" type="button">Cerrar</button>
+            </footer>
+        </div>
+    </div>
+
+    <div id="modalInfoUsd" class="modal-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-label="¿Qué significa USD Actualizados?">
+        <div class="modal-panel modal-panel-info">
+            <header class="modal-header">
+                <h2>💡 ¿Qué significa "USD actualizados"?</h2>
+                <button id="modalInfoUsdCerrar" class="modal-close" type="button" aria-label="Cerrar" title="Cerrar ventana">&times;</button>
+            </header>
+            <div class="modal-body">
+                <p>El valor de <strong>USD actualizados</strong> muestra cuánto valdría hoy un pago realizado en el pasado, expresado en dólares.</p>
+                <p>Esto se utiliza para tener una referencia más real del poder adquisitivo del dinero a lo largo del tiempo, teniendo en cuenta la inflación en Estados Unidos.</p>
+
+                <h3>📊 ¿Por qué se muestra este valor?</h3>
+                <p>Cuando un pago fue realizado hace varios años, su valor en dólares de ese momento no refleja lo mismo que hoy. Por eso, se aplica un ajuste basado en índices de inflación oficiales para actualizarlo a "valor presente".</p>
+
+                <h3>⚙️ ¿Cómo se calcula?</h3>
+                <p>El sistema toma el valor original en USD y lo ajusta utilizando la evolución del índice de precios (CPI) mes a mes.</p>
+                <p>De forma simplificada:</p>
+                <p><strong>USD actualizado = USD original × factor de actualización</strong></p>
+
+                <h3>🧾 Ejemplo simple</h3>
+                <p>En 2018 se realizó un pago de: <strong>USD 100</strong><br>Ajustando por inflación hasta hoy, ese mismo pago equivale aproximadamente a: <strong>USD 125 actuales</strong></p>
+                <p>👉 Esto no significa que el pago cambie, sino que sirve para entender su valor equivalente en el tiempo.</p>
+
+                <div class="info-nota">
+                    <h3>ℹ️ Importante</h3>
+                    <ul>
+                        <li>Este valor es <strong>informativo</strong> y se utiliza solo como referencia económica.</li>
+                        <li>No modifica el monto real del pago realizado.</li>
+                        <li>Permite comparar pagos de distintos años en una misma escala de valor actual.</li>
+                    </ul>
+                </div>
+            </div>
+            <footer class="modal-footer">
+                <button id="modalInfoUsdCerrarBtn" class="btn btn-ghost" type="button">Cerrar</button>
             </footer>
         </div>
     </div>

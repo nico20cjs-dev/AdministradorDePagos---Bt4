@@ -35,6 +35,8 @@ namespace AdminPagosDLL.Models
 
         public decimal ImporteEnDolares { get; set; }
 
+        public decimal ImporteDolarActualizado { get; set; }
+
         #endregion
 
         public Pago() { }

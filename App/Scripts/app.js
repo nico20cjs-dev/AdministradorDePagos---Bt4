@@ -71,6 +71,14 @@ function parseMvcDate(value) {
     return date.getFullYear() + '-' + (mm > 9 ? '' : '0') + mm + '-' + (dd > 9 ? '' : '0') + dd;
 }
 
+function getYearFromMvcDate(value) {
+    if (!value) return null;
+    var ticks = value.toString().replace('/Date(', '').replace(')/', '');
+    var date = new Date(parseInt(ticks, 10));
+    if (isNaN(date.getTime())) return null;
+    return date.getFullYear();
+}
+
 function formatArs(value) {
     return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2 }).format(value || 0);
 }
@@ -141,6 +149,7 @@ function renderRefCards(totals) {
         html += '<p class="stat-label">' + r.icon + ' ' + r.key + '</p>';
         html += '<p class="stat-value-ref-ars">' + formatArs(t.ars) + '</p>';
         html += '<p class="stat-value-ref-usd">USD ' + new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(t.usd || 0) + '</p>';
+        html += '<p class="stat-value-ref-usd-actualizado">' + formatUsd(t.usdActualizado || 0) + '</p>';
         html += '</article>';
     });
     $('.stats-grid-ref').html(html || '<p class="stats-ref-empty">Sin datos</p>');
@@ -151,25 +160,30 @@ function totalizarPagos() {
     var rows = dt.rows({ search: 'applied' }).data();
     var totalPesos = 0;
     var totalDolares = 0;
+    var totalDolaresActualizados = 0;
     var refTotals = {};
 
-    REFERENCIAS.forEach(function (r) { refTotals[r.key] = { ars: 0, usd: 0 }; });
+    REFERENCIAS.forEach(function (r) { refTotals[r.key] = { ars: 0, usd: 0, usdActualizado: 0 }; });
 
     rows.each(function (item) {
         var importe = Number(item[9]) || 0;
         var importeUsd = Number(item[10]) || 0;
+        var importeUsdActualizado = Number(item[11]) || 0;
         totalPesos += importe;
         totalDolares += importeUsd;
+        totalDolaresActualizados += importeUsdActualizado;
 
-        var ref = (item[11] || '').toString();
+        var ref = (item[12] || '').toString();
         if (refTotals[ref]) {
             refTotals[ref].ars += importe;
             refTotals[ref].usd += importeUsd;
+            refTotals[ref].usdActualizado += importeUsdActualizado;
         }
     });
 
     $('#pesosCalculados').text(formatArs(totalPesos));
     $('#dolaresCalculados').text(formatUsd(totalDolares));
+    $('#dolaresActualizadosCalculados').text(formatUsd(totalDolaresActualizados));
 
     renderRefCards(refTotals);
     updateFilterIndicator();
@@ -212,10 +226,11 @@ function renderDetalleTable(groupBy) {
         } else {
             key = (item[1] || 'Desconocido').toString();
         }
-        if (!groups[key]) groups[key] = { count: 0, ars: 0, usd: 0 };
+        if (!groups[key]) groups[key] = { count: 0, ars: 0, usd: 0, usdActualizado: 0 };
         groups[key].count++;
         groups[key].ars += Number(item[9]) || 0;
         groups[key].usd += Number(item[10]) || 0;
+        groups[key].usdActualizado += Number(item[11]) || 0;
     });
 
     var keys = Object.keys(groups);
@@ -228,26 +243,29 @@ function renderDetalleTable(groupBy) {
         ? function (a, b) { return b.localeCompare(a); }
         : function (a, b) { return a.localeCompare(b); });
 
-    var totalCount = 0, totalArs = 0, totalUsd = 0;
+    var totalCount = 0, totalArs = 0, totalUsd = 0, totalUsdActualizado = 0;
     var colGroup = groupBy === 'year' ? 'Año' : 'Ente';
     var html = '<table class="detalle-table">' +
-        '<thead><tr><th>' + colGroup + '</th><th class="num">Cant Pagos</th><th class="num">Total $</th><th class="num">Total USD</th></tr></thead><tbody>';
+        '<thead><tr><th>' + colGroup + '</th><th class="num">Cant Pagos</th><th class="num">Total $</th><th class="num">Total USD</th><th class="num">USD Actualizados</th></tr></thead><tbody>';
 
     keys.forEach(function (k) {
         var g = groups[k];
         html += '<tr><td>' + escapeHtmlAttr(k) + '</td>' +
             '<td class="num">' + g.count + '</td>' +
             '<td class="num">' + formatArs(g.ars) + '</td>' +
-            '<td class="num">' + formatUsd(g.usd) + '</td></tr>';
+            '<td class="num">' + formatUsd(g.usd) + '</td>' +
+            '<td class="num">' + formatUsd(g.usdActualizado) + '</td></tr>';
         totalCount += g.count;
         totalArs += g.ars;
         totalUsd += g.usd;
+        totalUsdActualizado += g.usdActualizado;
     });
 
     html += '</tbody><tfoot><tr class="total-row"><td>Total</td>' +
         '<td class="num">' + totalCount + '</td>' +
         '<td class="num">' + formatArs(totalArs) + '</td>' +
-        '<td class="num">' + formatUsd(totalUsd) + '</td></tr></tfoot></table>';
+        '<td class="num">' + formatUsd(totalUsd) + '</td>' +
+        '<td class="num">' + formatUsd(totalUsdActualizado) + '</td></tr></tfoot></table>';
 
     $('#detalleTableWrap').html(html);
 }
@@ -268,7 +286,8 @@ function leerPdf(action) {
                 return;
             }
 
-            var data = respuesta.pagos.map(function (pago) {
+                var data = respuesta.pagos.map(function (pago) {
+                var importeUsd = Number(pago.ImporteDolar) || 0;
                 var safePath = escapeHtmlAttr(pago.Path);
                 return [
                     pago.NroTransaccion,
@@ -281,7 +300,8 @@ function leerPdf(action) {
                     pago.TipoComprobante,
                     parseMvcDate(pago.FechaPago),
                     Number(pago.Importe) || 0,
-                    Number(pago.ImporteDolar) || 0,
+                    importeUsd,
+                    Number(pago.ImporteDolarActualizado) || 0,
                     getStringReference(pago.Referencia)
                 ];
             });
@@ -423,6 +443,16 @@ function cerrarModalFallos() {
     $('body').removeClass('no-scroll');
 }
 
+function abrirModalInfoUsd() {
+    $('#modalInfoUsd').removeAttr('aria-hidden');
+    $('body').addClass('no-scroll');
+}
+
+function cerrarModalInfoUsd() {
+    $('#modalInfoUsd').attr('aria-hidden', 'true');
+    $('body').removeClass('no-scroll');
+}
+
 $(document).ready(function () {
     initTheme();
 
@@ -469,7 +499,7 @@ $(document).ready(function () {
         var refName = $(this).data('card').replace('ref:', '');
         var dt = $('#dataTable').dataTable().api();
         var allRows = dt.rows({ search: 'applied' }).data();
-        var filtered = allRows.filter(function (r) { return r[11] === refName; });
+                var filtered = allRows.filter(function (r) { return r[12] === refName; });
         openDetalleModal(refName, filtered);
     });
 
@@ -481,12 +511,21 @@ $(document).ready(function () {
         renderDetalleTable($(this).val());
     });
 
+    $('#btnInfoUsdActualizado').on('click', abrirModalInfoUsd);
+    $('#modalInfoUsdCerrar, #modalInfoUsdCerrarBtn').on('click', cerrarModalInfoUsd);
+    $('#modalInfoUsd').on('click', function (e) {
+        if (e.target === this) cerrarModalInfoUsd();
+    });
+
     $(document).on('keydown', function (e) {
         if (e.key === 'Escape') {
             if (!$('#modalDetalle').attr('aria-hidden')) {
                 closeDetalleModal();
             }
             cerrarModalFallos();
+            if (!$('#modalInfoUsd').attr('aria-hidden')) {
+                cerrarModalInfoUsd();
+            }
             var panel = $('#filtersPanel');
             if (!panel.hasClass('is-collapsed')) {
                 panel.addClass('is-collapsed');
@@ -551,8 +590,8 @@ $(document).ready(function () {
         },
         aoColumnDefs: [
             { bSortable: false, aTargets: [6] },
-            { sWidth: '120px', aTargets: [4, 8, 9, 10] },
-            { targets: [9, 10], className: 'dt-right', render: function (data, type) {
+            { sWidth: '120px', aTargets: [4, 8, 9, 10, 11] },
+            { targets: [9, 10, 11], className: 'dt-right', render: function (data, type) {
                 if (type === 'display') {
                     return new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(data || 0);
                 }
@@ -567,6 +606,8 @@ $(document).ready(function () {
             infoEmpty: 'Sin pagos disponibles',
             infoFiltered: ' (filtrados de _MAX_ pagos totales)',
             lengthMenu: 'Mostrar _MENU_ pagos',
+            emptyTable: 'No hay datos disponibles en la tabla',
+            zeroRecords: 'No se encontraron pagos que coincidan con el filtro',
             paginate: {
                 previous: 'Anterior',
                 next: 'Siguiente'
@@ -619,7 +660,7 @@ $(document).ready(function () {
         var selectReference = $('#selectReference').val();
         if (selectReference !== '') {
             var txtReference = getStringReference(selectReference);
-            if ((data[11] || '').toString() !== txtReference) {
+                    if ((data[12] || '').toString() !== txtReference) {
                 return false;
             }
         }

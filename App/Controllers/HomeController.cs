@@ -8,6 +8,8 @@ using AdminPagosDLL.Models;
 using AdminPagosDLL.Core;
 using System.Net;
 using System.Diagnostics;
+using Newtonsoft.Json;
+using System.Globalization;
 
 namespace AdminPagosDLL.Controllers
 {
@@ -23,6 +25,7 @@ namespace AdminPagosDLL.Controllers
         private const string NoAbiertosPathsCacheKey = "NoAbiertosPaths";
         private const string NoIdentificadosPathsCacheKey = "NoIdentificadosPaths";
         private const string NoValPathsCacheKey = "NoValPaths";
+        private const string UsdInflationFactorsCacheKey = "UsdInflationFactors";
 
         public ActionResult Index()
         {
@@ -67,6 +70,58 @@ namespace AdminPagosDLL.Controllers
             {
                 Mensajes.Agregar(ex.Message);
             }
+        }
+
+        public static Dictionary<string, decimal> PrecomputeMonthlyFactors(string jsonFilePath)
+        {
+            if (!System.IO.File.Exists(jsonFilePath))
+                return new Dictionary<string, decimal>();
+
+            var json = System.IO.File.ReadAllText(jsonFilePath);
+            var rawRates = JsonConvert.DeserializeObject<Dictionary<string, double?>>(json);
+            if (rawRates == null || rawRates.Count == 0)
+                return new Dictionary<string, decimal>();
+
+            var monthlyRates = rawRates
+                .Where(kvp => kvp.Value.HasValue)
+                .Select(kvp => new
+                {
+                    Month = DateTime.ParseExact(kvp.Key, "yyyy-MM", CultureInfo.InvariantCulture),
+                    Rate = kvp.Value.Value
+                })
+                .OrderByDescending(m => m.Month)
+                .ToList();
+
+            if (monthlyRates.Count == 0)
+                return new Dictionary<string, decimal>();
+
+            var latestMonth = monthlyRates.First().Month;
+            var factors = new Dictionary<string, decimal>();
+            double runningMultiplier = 1.0;
+            factors[latestMonth.ToString("yyyy-MM")] = 1.0m;
+
+            foreach (var item in monthlyRates.Skip(1))
+            {
+                runningMultiplier *= 1.0 + item.Rate / 100.0;
+                factors[item.Month.ToString("yyyy-MM")] = (decimal)Math.Round(runningMultiplier, 4);
+            }
+
+            return factors;
+        }
+
+        private Dictionary<string, decimal> GetUsdInflationFactors()
+        {
+            var cache = MemoryCache.Default;
+            var factors = cache.Get(UsdInflationFactorsCacheKey) as Dictionary<string, decimal>;
+            if (factors != null) return factors;
+
+            var path = Server.MapPath("~/App_Data/usdInflactionFactors.json");
+            factors = PrecomputeMonthlyFactors(path);
+            if (factors.Count > 0)
+            {
+                cache.Set(UsdInflationFactorsCacheKey, factors, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
+            }
+            return factors;
         }
 
         /// <summary>
@@ -148,8 +203,15 @@ namespace AdminPagosDLL.Controllers
             //Primero lee la cache (saltear si forceReinterpret)
             if (!forceReinterpret && pagos != null && pagos.Count > 0)
             {
+                var inflationFactors = GetUsdInflationFactors();
                 foreach (var pe in pagos.OfType<PagoEfectuado>())
+                {
                     pe.EnteDisplayText = Funciones.GetEnteDisplayText(pe.Ente);
+                    if (inflationFactors.TryGetValue(pe.FechaPago.ToString("yyyy-MM"), out var factor))
+                        pe.ImporteDolarActualizado = decimal.Round(pe.ImporteDolar * factor, 2);
+                    else
+                        pe.ImporteDolarActualizado = pe.ImporteDolar;
+                }
                 return Json(new {
                     Mensajes,
                     pagos,
@@ -182,8 +244,15 @@ namespace AdminPagosDLL.Controllers
                 cache.Set(NoAbiertosPathsCacheKey, funcion.NoAbiertosPaths, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
                 cache.Set(NoIdentificadosPathsCacheKey, funcion.NoIdentificadosPaths, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
                 cache.Set(NoValPathsCacheKey, noValPaths, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
+                var inflationFactors = GetUsdInflationFactors();
                 foreach (var pe in pagos.OfType<PagoEfectuado>())
+                {
                     pe.EnteDisplayText = Funciones.GetEnteDisplayText(pe.Ente);
+                    if (inflationFactors.TryGetValue(pe.FechaPago.ToString("yyyy-MM"), out var factor))
+                        pe.ImporteDolarActualizado = decimal.Round(pe.ImporteDolar * factor, 2);
+                    else
+                        pe.ImporteDolarActualizado = pe.ImporteDolar;
+                }
                 return Json(new {
                     Mensajes,
                     pagos,
@@ -220,6 +289,7 @@ namespace AdminPagosDLL.Controllers
                 MemoryCache.Default.Remove(NoAbiertosPathsCacheKey);
                 MemoryCache.Default.Remove(NoIdentificadosPathsCacheKey);
                 MemoryCache.Default.Remove(NoValPathsCacheKey);
+                MemoryCache.Default.Remove(UsdInflationFactorsCacheKey);
 
                 Funciones.BorrarSerializacion();
 

@@ -1156,6 +1156,12 @@ namespace AdminPagosDLL.Core
                             _pago.FechaPago = _pago.FechaPago == default(DateTime) ? _pago.FechaVencimiento : _pago.FechaPago;
                             _pago.FechaVencimiento = _pago.FechaVencimiento == default(DateTime) ? _pago.FechaPago : _pago.FechaVencimiento;
 
+                            // Si FechaPago es futura (dato invalido), usar FechaVencimiento
+                            if (_pago.FechaPago > DateTime.Today && _pago.FechaVencimiento != default(DateTime) && _pago.FechaVencimiento <= DateTime.Today)
+                            {
+                                _pago.FechaPago = _pago.FechaVencimiento;
+                            }
+
                             if (_pago.Importe == 0)
                             {
 
