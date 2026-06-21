@@ -140,7 +140,7 @@ function renderRefCards(totals) {
         html += '<article class="stat-card stat-card-ref">';
         html += '<p class="stat-label">' + r.icon + ' ' + r.key + '</p>';
         html += '<p class="stat-value-ref-ars">' + formatArs(t.ars) + '</p>';
-        html += '<p class="stat-value-ref-usd">' + formatUsd(t.usd) + '</p>';
+        html += '<p class="stat-value-ref-usd">USD ' + new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(t.usd || 0) + '</p>';
         html += '</article>';
     });
     $('.stats-grid-ref').html(html || '<p class="stats-ref-empty">Sin datos</p>');
@@ -172,6 +172,17 @@ function totalizarPagos() {
     $('#dolaresCalculados').text(formatUsd(totalDolares));
 
     renderRefCards(refTotals);
+    updateFilterIndicator();
+}
+
+function updateFilterIndicator() {
+    var sidebarActive = $('#selectReference').val() || $('#selectEnte').val();
+    var colFilterActive = false;
+    $('#dataTable tfoot input').each(function () {
+        if ($(this).val()) { colFilterActive = true; return false; }
+    });
+    var globalSearchActive = !!($('.dataTables_filter input').val());
+    $('#btnToggleFiltros').toggleClass('btn-toggle--filtered', !!(sidebarActive || colFilterActive || globalSearchActive));
 }
 
 function leerPdf(action) {
@@ -194,7 +205,7 @@ function leerPdf(action) {
                 var safePath = escapeHtmlAttr(pago.Path);
                 return [
                     pago.NroTransaccion,
-                    pago.Ente,
+                    pago.EnteDisplayText || 'Desconocido',
                     pago.NroCliente,
                     pago.NroCtaDebito,
                     parseMvcDate(pago.FechaVencimiento),
@@ -370,10 +381,8 @@ $(document).ready(function () {
         }
     });
 
-    $('#btnAplicarFiltros').on('click', applyAdvancedFilters);
+    $('#selectReference, #selectEnte').on('change', applyAdvancedFilters);
     $('#btnLimpiarFiltros').on('click', function () {
-        $('#ImporteDesde').val('');
-        $('#ImporteHasta').val('');
         $('#selectReference').val('');
         $('#selectEnte').val('');
         applyAdvancedFilters();
@@ -437,8 +446,6 @@ $(document).ready(function () {
             if (data) {
                 _savedStateLoaded = true;
                 if (data.advancedFilters) {
-                    $('#ImporteDesde').val(data.advancedFilters.importeDesde || '');
-                    $('#ImporteHasta').val(data.advancedFilters.importeHasta || '');
                     $('#selectReference').val(data.advancedFilters.selectReference || '');
                     $('#selectEnte').val(data.advancedFilters.selectEnte || '');
                 }
@@ -450,8 +457,6 @@ $(document).ready(function () {
         },
         stateSaveParams: function (settings, data) {
             data.advancedFilters = {
-                importeDesde: $('#ImporteDesde').val(),
-                importeHasta: $('#ImporteHasta').val(),
                 selectReference: $('#selectReference').val(),
                 selectEnte: $('#selectEnte').val()
             };
@@ -502,6 +507,8 @@ $(document).ready(function () {
                 // Sincronizar el input con la búsqueda restaurada por stateSave
                 $('input', this.footer()).val(that.search());
             });
+            $('.dataTables_filter input').on('input', updateFilterIndicator);
+            updateFilterIndicator();
         }
     });
 
@@ -522,17 +529,6 @@ $(document).ready(function () {
             return true;
         }
 
-        var min = parseFloat($('#ImporteDesde').val());
-        var max = parseFloat($('#ImporteHasta').val());
-        var importe = parseFloat(data[9]) || 0;
-
-        if (!isNaN(min) && importe < min) {
-            return false;
-        }
-        if (!isNaN(max) && importe > max) {
-            return false;
-        }
-
         var selectReference = $('#selectReference').val();
         if (selectReference !== '') {
             var txtReference = getStringReference(selectReference);
@@ -541,10 +537,11 @@ $(document).ready(function () {
             }
         }
 
-        var selectEnte = ($('#selectEnte').val() || '').toLowerCase();
-        if (selectEnte !== '') {
+        var selectEnteVal = $('#selectEnte').val();
+        if (selectEnteVal !== '') {
             var enteDT = (data[1] || '').toLowerCase();
-            if (enteDT.indexOf(selectEnte) === -1) {
+            var enteText = $('#selectEnte option:selected').text().toLowerCase();
+            if (enteDT.indexOf(enteText) === -1) {
                 return false;
             }
         }

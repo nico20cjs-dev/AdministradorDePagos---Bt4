@@ -66,20 +66,12 @@
             </article>
         </section>
 
-        <section class="stats-grid-ref" aria-label="Resumen por referencia"></section>
+        <section class="stats-grid-ref" aria-label="Totales por referencia"></section>
 
         <div class="app-layout">
             <aside id="filtersPanel" class="filters-sidebar is-collapsed" aria-label="Filtros de busqueda">
                 <div class="filters-sidebar-inner">
                     <div class="filters-stack">
-                        <label class="field">
-                            <span>Importe desde</span>
-                            <input type="number" id="ImporteDesde" placeholder="0" min="0" step="0.01">
-                        </label>
-                        <label class="field">
-                            <span>Importe hasta</span>
-                            <input type="number" id="ImporteHasta" placeholder="0" min="0" step="0.01">
-                        </label>
                         <label class="field">
                             <span>Referencia</span>
                             <select id="selectReference">
@@ -98,29 +90,28 @@
                             <span>Ente</span>
                             <select id="selectEnte">
                                 <option value=""></option>
-                                <option value="Arba">💰 Arba</option>
-                                <option value="Aguas Bonaerenses">💧 Aguas Bonaerenses</option>
-                                <option value="AySA">💧 AySA</option>
-                                <option value="Exp San Rafael">🏠 Expensas Lanus</option>
-                                <option value="Exp Ungar">🏠 Ungar VG</option>
-                                <option value="Edesur">⚡ Edesur</option>
-                                <option value="Cevige">⚡ Cevige</option>
-                                <option value="Metrogas">🔥 Metrogas</option>
-                                <option value="Municipalidad de Lanus">🏛️ Lanus</option>
-                                <option value="Municipalidad de Villa Gesell">🏛️ Villa Gesell</option>
-                                <option value="Claro">📞 Claro</option>
-                                <option value="Movistar">📞 Movistar</option>
+                                <option value="0">Desconocido</option>
+                                <option value="1">💰 Arba</option>
+                                <option value="2">💧 Aguas Bonaerenses</option>
+                                <option value="3">💧 AySA</option>
+                                <option value="4">🏠 Expensas Lanus</option>
+                                <option value="5">🏠 Ungar VG</option>
+                                <option value="6">⚡ Edesur</option>
+                                <option value="7">⚡ Cevige</option>
+                                <option value="8">🔥 Metrogas</option>
+                                <option value="9">🏛️ Municip. Lanus</option>
+                                <option value="10">🏛️ Municip. Villa Gesell</option>
+                                <option value="11">📞 Claro</option>
+                                <option value="12">📞 Movistar</option>
+                                <option value="13">📞 Telecentro</option>
+                                <option value="14">📞 Telefonica</option>
                             </select>
                         </label>
                     </div>
                     <div class="filters-actions">
-                        <button id="btnAplicarFiltros" class="btn btn-primary" type="button" title="Aplicar filtros avanzados">
-                            <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/></svg>
-                            <span>Aplicar</span>
-                        </button>
                         <button id="btnLimpiarFiltros" class="btn btn-ghost" type="button" title="Limpiar todos los filtros">
                             <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M18 6 6 18M6 6l12 12"/></svg>
-                            <span>Limpiar</span>
+                            <span>Limpiar filtros</span>
                         </button>
                     </div>
                 </div>

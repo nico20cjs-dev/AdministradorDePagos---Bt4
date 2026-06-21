@@ -47,7 +47,7 @@ html[data-theme='dark'] body {
 }
 
 .app-shell {
-    max-width: 1400px;
+    max-width: 1600px;
     margin: 0 auto;
     padding: 1.25rem;
 }
@@ -188,13 +188,15 @@ html[data-theme='dark'] body {
     font-size: clamp(0.78rem, 1.5vw, 1rem);
     font-weight: 700;
     color: var(--text);
+    text-align: right;
 }
 
 .stat-value-ref-usd {
     margin: -0.05rem 0 0;
     font-size: clamp(0.68rem, 1.3vw, 0.88rem);
     font-weight: 600;
-    color: var(--muted);
+    color: var(--success);
+    text-align: right;
 }
 
 .stat-card-warn {
@@ -936,4 +938,23 @@ table.dataTable.no-footer {
         overflow: auto;
         padding-right: 0.2rem;
     }
+}
+
+.btn-toggle--filtered {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, var(--surface-2));
+    padding-right: 1.2rem;
+    position: relative;
+}
+
+.btn-toggle--filtered::after {
+    content: '';
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent);
 }

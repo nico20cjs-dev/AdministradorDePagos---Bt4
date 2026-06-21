@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace AdminPagosDLL.Models
 {
@@ -10,7 +11,11 @@ namespace AdminPagosDLL.Models
     {
 
         public string NroTransaccion { get; set; }
-        public string Ente { get; set; }
+        public EEnte Ente { get; set; }
+
+        [JsonIgnore]
+        public string EnteDisplayText { get; set; }
+
         public string NroCliente { get; set; }
         public string NroCtaDebito { get; set; }
         public DateTime FechaVencimiento { get; set; }

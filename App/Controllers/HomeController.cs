@@ -138,6 +138,8 @@ namespace AdminPagosDLL.Controllers
             //Primero lee la cache (saltear si forceReinterpret)
             if (!forceReinterpret && pagos != null && pagos.Count > 0)
             {
+                foreach (var pe in pagos.OfType<PagoEfectuado>())
+                    pe.EnteDisplayText = Funciones.GetEnteDisplayText(pe.Ente);
                 return Json(new {
                     Mensajes,
                     pagos,
@@ -170,6 +172,8 @@ namespace AdminPagosDLL.Controllers
                 cache.Set(NoAbiertosPathsCacheKey, funcion.NoAbiertosPaths, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
                 cache.Set(NoIdentificadosPathsCacheKey, funcion.NoIdentificadosPaths, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
                 cache.Set(NoValPathsCacheKey, noValPaths, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
+                foreach (var pe in pagos.OfType<PagoEfectuado>())
+                    pe.EnteDisplayText = Funciones.GetEnteDisplayText(pe.Ente);
                 return Json(new {
                     Mensajes,
                     pagos,
@@ -183,6 +187,7 @@ namespace AdminPagosDLL.Controllers
             }
             catch (Exception ex)
             {
+                Mensajes.Agregar("Error en el metodo LeerPDF");
                 return Json(new { Mensajes }, JsonRequestBehavior.AllowGet);
             }
         }

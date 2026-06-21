@@ -39,6 +39,178 @@ namespace AdminPagosDLL.Core
             return System.IO.Path.Combine(appData, "pagos_serializados.json");
         }
 
+        /// <summary>
+        /// Identifica el Ente correspondiente del texto de manera inteligente.
+        /// Tolera variaciones de mayúsculas, espacios extras, y palabras adicionales.
+        /// Ejemplo: "Buenos Aires- Arba Inmobiliario" → EEnte.Arba
+        /// </summary>
+        /// <param name="line">Línea de texto a analizar</param>
+        /// <returns>EEnte identificado o EEnte.Desconocido si no encuentra coincidencia</returns>
+        private EEnte IdentifyEnte(string line)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+                return EEnte.Desconocido;
+
+            // Reemplazo de posibles textos
+            line = line.Replace("Nombre del Ente Abonado:", "")
+                .Replace("Nombre del Ente Abonado", "")
+                .Replace("PAGO DE ", "")
+                .Trim();
+
+            var cleanText = line.ToLower().Trim();
+
+            // Casos fijos que se sabe que se dan bastante seguido
+            if (cleanText == "claro")
+            {
+                return EEnte.Claro;
+            }
+            else if (cleanText == "AGUAS BONAERENSES".ToLower() || cleanText == "aysa" || cleanText == "agua y saneamientos argentinos")
+            {
+                return EEnte.AguasBonaerenses;
+            }
+            else if (cleanText == "Buenos Aires- Arba Inmobiliario".ToLower())
+            {
+                return EEnte.Arba;
+            }
+            else if (cleanText == "buenos aires- municipalidad de lanus")
+            {
+                return EEnte.MunicipalidadLanus;
+            }
+            else if (cleanText == "Edesur".ToLower())
+            {
+                return EEnte.Edesur;
+            }
+            else if (cleanText == "metrogas".ToLower())
+            {
+                return EEnte.Metrogas;
+            }
+
+            // Intenta parse directo primero
+            foreach (EEnte ente in Enum.GetValues(typeof(EEnte)))
+            {
+                if (ente == EEnte.Desconocido)
+                    continue;
+
+                if (cleanText.Contains(ente.ToString().ToLower()))
+                    return ente;
+            }
+
+            // Si no encuentra coincidencia exacta, busca palabras clave
+
+            // Limpiar el texto: trim, espacios múltiples, convertir a minúsculas
+            cleanText = Regex.Replace(line.Trim(), @"\s+", " ");
+
+            // Diccionario de palabras clave por Ente
+            var enteKeywords = new Dictionary<EEnte, string[]>
+            {
+                { EEnte.Arba, new[] { "arba" } },
+                { EEnte.AguasBonaerenses, new[] { "aguas bonaerenses", "aguas", "agua bonaerense" } },
+                { EEnte.AySA, new[] { "aysa", "ays a" } },
+                { EEnte.ExpSanRafael, new[] { "san rafael", "expensas lanus", "exp san rafael" } },
+                { EEnte.ExpUngar, new[] { "ungar", "exp ungar", "expensas ungar" } },
+                { EEnte.Edesur, new[] { "edesur" } },
+                { EEnte.Cevige, new[] { "cevige" } },
+                { EEnte.Metrogas, new[] { "metrogas", "metro gas" } },
+                { EEnte.MunicipalidadLanus, new[] { "municipalidad de lanus", "lanus", "municipalidad lanus" } },
+                { EEnte.MunicipalidadVillaGesell, new[] { "municipalidad de villa gesell", "villa gesell", "municipalidad villa gesell" } },
+                { EEnte.Claro, new[] { "claro" } },
+                { EEnte.Movistar, new[] { "movistar" } }
+            };
+
+            // Buscar coincidencias (primero las más específicas, luego las genéricas)
+            var matches = enteKeywords
+                .Where(kvp => kvp.Value.Any(keyword => cleanText.Contains(keyword)))
+                .OrderByDescending(kvp => kvp.Value.Max(k => k.Length)) // Priorizar coincidencias más largas
+                .FirstOrDefault();
+
+            return matches.Key != default(EEnte) ? matches.Key : EEnte.Desconocido;
+        }
+
+        /// <summary>
+        /// Extrae el Ente de una línea que contiene "Nombre del Ente Abonado: [texto]"
+        /// </summary>
+        private EEnte ExtractEnteFromLine(string line)
+        {
+            //if (!line.Contains("Nombre del Ente Abonado"))
+            //    return EEnte.Desconocido;
+
+            var enteText = line
+                .Replace("Nombre del Ente Abonado:", "")
+                .Replace("Nombre del Ente Abonado", "")
+                .Trim();
+
+            return IdentifyEnte(enteText);
+        }
+
+        private static readonly Dictionary<string, (EEnte Ente, EReferencia Referencia)> ClienteMap =
+            new Dictionary<string, (EEnte, EReferencia)>
+            {
+                { "0000000000104243024", (EEnte.MunicipalidadLanus, EReferencia.Yrigoyen) },
+                
+                { "20199489345", (EEnte.Claro, EReferencia.Norma) },
+
+                { "20902705060", (EEnte.Claro, EReferencia.Nico) },
+
+                //{ "00251361487", (EEnte.Arba, EReferencia.Yrigoyen) },
+                
+                { "030006245390", (EEnte.Edesur, EReferencia.Yrigoyen) },
+                { "0004022218", (EEnte.Edesur, EReferencia.Yrigoyen) },
+                { "00904022218", (EEnte.Edesur, EReferencia.Yrigoyen) },
+                { "00251361487", (EEnte.Edesur, EReferencia.Yrigoyen) },
+                { "24619974533928", (EEnte.Telefonica, EReferencia.Yrigoyen) },
+                { "4002036838564", (EEnte.Telefonica, EReferencia.Yrigoyen) },
+
+                { "101122140030", (EEnte.MunicipalidadVillaGesell, EReferencia.VillaGesell) },
+                { "0001392230", (EEnte.AguasBonaerenses, EReferencia.VillaGesell) },
+                { "0005820", (EEnte.Cevige, EReferencia.VillaGesell) },
+                { "901043090065", (EEnte.MunicipalidadVillaGesell, EReferencia.VillaGesell) },
+                { "00101250019153", (EEnte.Arba, EReferencia.VillaGesell) },
+                { "01250019153", (EEnte.Arba, EReferencia.VillaGesell) },
+
+                { "0001280444", (EEnte.Edesur, EReferencia.Nico) },
+
+                { "00100250089457", (EEnte.Arba, EReferencia.VelezSarsfield) },
+                { "00250089457", (EEnte.Arba, EReferencia.VelezSarsfield) },
+                { "3860000616796", (EEnte.AySA, EReferencia.VelezSarsfield) },
+                { "0000616796", (EEnte.AySA, EReferencia.VelezSarsfield) },
+                { "0001280445", (EEnte.Edesur, EReferencia.VelezSarsfield) },
+                { "0000000000402052000", (EEnte.MunicipalidadLanus, EReferencia.VelezSarsfield) },
+
+                { "0003846727", (EEnte.Edesur, EReferencia.TiaRaquel) },
+                { "030003392507", (EEnte.Metrogas, EReferencia.TiaRaquel) },
+                { "0000000000445015012", (EEnte.MunicipalidadLanus, EReferencia.TiaRaquel) },
+                { "1003169065010001", (EEnte.Telefonica, EReferencia.TiaRaquel) },
+                { "0564453739", (EEnte.Telefonica, EReferencia.TiaRaquel) }
+            };
+
+        private bool TryMapClienteData(string nroCliente, out (EEnte Ente, EReferencia Referencia) clienteData)
+        {
+            return ClienteMap.TryGetValue(nroCliente, out clienteData);
+        }
+
+        public static string GetEnteDisplayText(EEnte ente)
+        {
+            switch (ente)
+            {
+                case EEnte.Desconocido: return "Desconocido";
+                case EEnte.Arba: return "\U0001F4B0 Arba";
+                case EEnte.AguasBonaerenses: return "\U0001F4A7 Aguas Bonaerenses";
+                case EEnte.AySA: return "\U0001F4A7 AySA";
+                case EEnte.ExpSanRafael: return "\U0001F3E0 Expensas Lanus";
+                case EEnte.ExpUngar: return "\U0001F3E0 Ungar VG";
+                case EEnte.Edesur: return "\u26A1 Edesur";
+                case EEnte.Cevige: return "\u26A1 Cevige";
+                case EEnte.Metrogas: return "\U0001F525 Metrogas";
+                case EEnte.MunicipalidadLanus: return "\U0001F3DB\uFE0F Municip. Lanus";
+                case EEnte.MunicipalidadVillaGesell: return "\U0001F3DB\uFE0F Municip. Villa Gesell";
+                case EEnte.Claro: return "\U0001F4DE Claro";
+                case EEnte.Movistar: return "\U0001F4DE Movistar";
+                case EEnte.Telecentro: return "\U0001F4DE Telecentro";
+                case EEnte.Telefonica: return "\U0001F4DE Telefonica";
+                default: return ente.ToString();
+            }
+        }
+
         #region Metodos Públicos
 
         public List<Pago> CargarPagos(string path = "", bool forceReinterpret = false)
@@ -70,7 +242,7 @@ namespace AdminPagosDLL.Core
         public List<Pago> InterpretarPDF(string path = "")
         {
             int i = 0;
-            
+
             try
             {
                 var directorio = "";
@@ -133,7 +305,7 @@ namespace AdminPagosDLL.Core
                 //ArchivosLeidos
                 int cantidadArchivosAux = cantidadArchivos;
                 string filesReaded = ConfigurationManager.AppSettings["ArchivosLeidos"];
-                if (cantidadArchivos != 0 &&!String.IsNullOrEmpty(filesReaded))
+                if (cantidadArchivos != 0 && !String.IsNullOrEmpty(filesReaded))
                 {
                     if (int.TryParse(filesReaded, out int aux) && int.Parse(filesReaded) > 0)
                     {
@@ -153,11 +325,11 @@ namespace AdminPagosDLL.Core
                         continue;
                     }
 
-                    if (path.Contains("V.G\\2018 EXPENSAS\\4-18  PAGO TRANF 9-4-18 EXP. VG..pdf"))
+                    if (path.Contains("00100250089457\\2 0 2 6 - A R B A\\2026-02-05 ARBA vto.19-2.pdf"))
                     {
-                        
+
                     }
-                    
+
                     try
                     {
                         reader = new PdfReader(path);
@@ -224,7 +396,7 @@ namespace AdminPagosDLL.Core
 
                             }
                         }
-                        
+
                     }
 
                     else if (nombreArchivo.ToLower().Contains("gesell")
@@ -275,11 +447,12 @@ namespace AdminPagosDLL.Core
                         text += PdfTextExtractor.GetTextFromPage(reader, pageRead);
 
                         // Validar que el texto contenga alguna de las frases aprobadas para asegurarnos de que es un comprobante de pago
-                        var frasesOk = new List<string> { "pago efectuado", "pagos realizados", "operación realizada con éxito", 
-                            "5º-A" , "metrogas", "San Rafael", "CONSORCIO DE COPROPIETARIOS EDIFICIO", "ungar", "20382717056"
+                        var frasesOk = new List<string> { "pago efectuado", "pagos realizados", "operación realizada con éxito",
+                            "5º-A" , "metrogas", "San Rafael", "CONSORCIO DE COPROPIETARIOS EDIFICIO", "ungar", "20382717056",
+                            "Comprobante de pago"
                         };
                         var frasesOmitir = new List<string> { "Agenda de Pagos" };
-                        if (text != null && 
+                        if (text != null &&
                             frasesOk.Any(frase => text.IndexOf(frase, StringComparison.OrdinalIgnoreCase) >= 0) &&
                             !frasesOmitir.Any(frase => text.IndexOf(frase, StringComparison.OrdinalIgnoreCase) >= 0)
                             )
@@ -343,7 +516,7 @@ namespace AdminPagosDLL.Core
                                 }
                             }
                         }
-                        
+
                         if (!leer)
                         {
                             CantNoIdentificados++;
@@ -401,15 +574,15 @@ namespace AdminPagosDLL.Core
                                         {
                                             var valores = clave.Split(' ');
                                             _pago.Referencia = EReferencia.Norma;
-                                            _pago.Ente = "Exp San Rafael";
+                                            _pago.Ente = EEnte.ExpSanRafael;
 
-                                            _pago.Importe = decimal.Parse(valores.Last().Replace("$", ""));                                            
+                                            _pago.Importe = decimal.Parse(valores.Last().Replace("$", ""));
                                             _pago.FechaPago = format.CrearFecha(nombreArchivo.Split(' ').FirstOrDefault());
                                             _pago.FechaVencimiento = _pago.FechaPago;
                                             break;
                                         }
                                     }
-                                    catch (Exception )
+                                    catch (Exception)
                                     {
 
                                     }
@@ -439,35 +612,29 @@ namespace AdminPagosDLL.Core
                                         }
 
                                         break;
+
+                                    case "Código/Usuario":
+                                    case "Codigo/Usuario":
                                     case "Nro de Cliente":
                                     case "NRO. DE CLIENTE":
 
                                         _pago.NroCliente = valor;
 
-                                        if (!String.IsNullOrEmpty(_pago.Ente))
+                                        if (_pago.Ente == EEnte.Desconocido)
                                         {
-                                            //Si es comprobante Simple se completa el nombre del Ente
-                                            if (_pago.Ente.Equals("Buenos Aires- Municipalidad de"))
+                                            // Si no se pudo identificar el Ente se calcula por el Nro de cliente
+                                            if (TryMapClienteData(_pago.NroCliente, out var clienteData))
                                             {
-                                                if (_pago.NroCliente.Equals("0000000000104243024")) // muni-Yrigoyen
-                                                {
-                                                    _pago.Ente += " Lanus";
-                                                }
-                                                else if (_pago.NroCliente.Equals("0000000000445015012")) //muni-raquel
-                                                {
-                                                    _pago.Ente += " Lanus";
-                                                }
-                                                else if (_pago.NroCliente.Equals("101122140030"))
-                                                {
-                                                    _pago.Ente += " Villa Gesell";
-                                                }
+                                                _pago.Ente = clienteData.Ente;
+                                                _pago.Referencia = clienteData.Referencia;
+                                            }
+                                            else
+                                            { 
+                                            
                                             }
                                         }
                                         break;
-                                    case "Código/Usuario":
-                                    case "Codigo/Usuario":
-                                        _pago.NroCliente = valor;
-                                        break;
+                                    
                                     case "Nro de cuenta débito":
                                     case "NRO DE CUENTA":
                                     case "Cuenta a debitar":
@@ -491,7 +658,7 @@ namespace AdminPagosDLL.Core
                                             _pago.Importe = decimal.Parse(valor.Replace("$", ""));
                                         }
 
-                                        
+
                                         break;
                                     case "Fecha de Vencimiento":
                                     case "VTO":
@@ -507,25 +674,34 @@ namespace AdminPagosDLL.Core
                                     case "Cuota/Año":
                                         //006/17
                                         _pago.Cuota = valor;
-                                        break;                                    
+                                        break;
                                     case "Pago de":
-                                        _pago.Ente = valor;
+                                        _pago.Ente = ExtractEnteFromLine(valor);
                                         break;
                                     case "abonado":
 
-                                        //Buenos Aires - Municipalidad de Lanus
-                                        //Buenos Aires - Municipalidad de Villa Gesell
-                                        if (lineaAnterior.Contains("Nombre del ente"))
+                                        
+                                        try
                                         {
-                                            var enteAux = lineaAnterior.Replace("Nombre del ente", "").Trim() + " " + valor;
+                                            var enteText = lineaAnterior;
 
-                                            enteAux = enteAux.Replace("Códigos de Pago que comiencen con 2", "").Trim();
+                                            //Buenos Aires - Municipalidad de Lanus
+                                            //Buenos Aires - Municipalidad de Villa Gesell
+                                            // Si contiene "Nombre del ente", extrae el valor real
+                                            if (enteText.Contains("Nombre del ente"))
+                                            {
+                                                enteText = enteText.Replace("Nombre del ente", "").Trim();
+                                                enteText = enteText + " " + valor;
+                                                enteText = enteText.Replace("Códigos de Pago que comiencen con 2", "").Trim();
+                                            }
 
-                                            _pago.Ente = enteAux.Trim();
+                                            // Parse case-insensitive
+                                            _pago.Ente = ExtractEnteFromLine(enteText);
                                         }
-                                        else
+                                        catch (ArgumentException)
                                         {
-                                            _pago.Ente = lineaAnterior;
+                                            _pago.Ente = EEnte.Desconocido; // Valor por defecto si no coincide
+                                                                        // O lanzar excepción si prefieres: throw new InvalidOperationException($"Ente no reconocido: {lineaAnterior}");
                                         }
 
                                         break;
@@ -540,7 +716,7 @@ namespace AdminPagosDLL.Core
 
                                         if (valor.Contains("CONSORCIO DE COPROPIETARIOS EDIFICIO"))
                                         {
-                                            _pago.Ente = "Exp Ungar";
+                                            _pago.Ente = EEnte.ExpUngar;
                                         }
                                         break;
 
@@ -552,14 +728,14 @@ namespace AdminPagosDLL.Core
                                             {
                                                 _pago.FechaPago = format.CrearFecha(line);
                                             }
-                                            if (line.Contains("Nombre del Ente Abonado"))
-                                            {
-                                                _pago.Ente = line.Trim().Replace("Nombre del Ente Abonado: ", "");
-                                            }
-                                            if (line.Contains("PAGO DE AGUAS BONAERENSES"))
-                                            {
-                                                _pago.Ente = "Aguas Bonaerenses";
-                                            }
+                                            //if (line.Contains("Nombre del Ente Abonado"))
+                                            //{
+                                            //    //_pago.Ente = ExtractEnteFromLine(line);
+                                            //}
+                                            //if (line.Contains("PAGO DE AGUAS BONAERENSES"))
+                                            //{
+                                            //    //_pago.Ente = ExtractEnteFromLine(line);
+                                            //}
                                             if (line.Contains("Número de transacción"))
                                             {
                                                 var f = new Formatos();
@@ -574,6 +750,12 @@ namespace AdminPagosDLL.Core
                                             }
                                         }
 
+                                        //Comprobante de MP
+                                        if (lineaAnterior == "Pagaste a")
+                                        {
+                                            _pago.Ente = ExtractEnteFromLine(clave);
+                                        }
+
                                         break;
                                 }
 
@@ -581,19 +763,19 @@ namespace AdminPagosDLL.Core
                             }
 
                             // Referencia
-                            if (!String.IsNullOrEmpty(_pago.NroCliente))
+                            if (!String.IsNullOrEmpty(_pago.NroCliente) && _pago.Referencia == EReferencia.Desconocido)
                             {
                                 switch (_pago.NroCliente.Trim())
                                 {
                                     //Pendientes de saber de quien son
-                                    case "20902705060": //Claro-Norma
-                                    case "08620902705060": //Claro
                                     case "08620382717056": //Claro
                                         break;
 
                                     //NICO
                                     case "0001280444":
                                     case "00901280444":
+                                    case "20902705060": //Claro-Nico
+                                    case "08620902705060": //Claro-Nico
                                         _pago.Referencia = EReferencia.Nico;
                                         break;
 
@@ -697,28 +879,28 @@ namespace AdminPagosDLL.Core
 
                                     else
                                     {
-                                    
+
                                     }
                                 }
                             }
 
-                            if (String.IsNullOrEmpty(_pago.Ente))
+                            if (_pago.Ente == EEnte.Desconocido)
                             {
                                 string[] lineas = text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries);
 
                                 if (nombreArchivo.ToLower().Contains("bonaerenses"))
                                 {
-                                    _pago.Ente = "Aguas BonaerenSes";
+                                    _pago.Ente = EEnte.AguasBonaerenses;
                                 }
 
                                 else if (nombreArchivo.ToLower().Contains("cevige"))
                                 {
-                                    _pago.Ente = "Cevige";
+                                    _pago.Ente = EEnte.Cevige;
                                 }
 
                                 else if (text.Contains("20382717056"))
                                 {
-                                    _pago.Ente = "Claro";
+                                    _pago.Ente = EEnte.Claro;
 
                                     if (_pago.Importe == 0)
                                     {
@@ -733,7 +915,7 @@ namespace AdminPagosDLL.Core
                                 else if (text.Contains("UNGAR") ||
                                     text.Contains("EDIFICIO SAN MARTIN"))
                                 {
-                                    _pago.Ente = "Exp Ungar";
+                                    _pago.Ente = EEnte.ExpUngar;
 
                                     if (reader.NumberOfPages == 1)
                                     {
@@ -768,7 +950,7 @@ namespace AdminPagosDLL.Core
 
                                         }
 
-                                        if (_pago.FechaVencimiento== default(DateTime))
+                                        if (_pago.FechaVencimiento == default(DateTime))
                                         {
                                             int star = text.IndexOf("SALDO A PAGAR AL");
                                             if (star != -1)
@@ -795,7 +977,7 @@ namespace AdminPagosDLL.Core
                                                     }
                                                 }
 
-                                                if (_pago.FechaVencimiento== default(DateTime))
+                                                if (_pago.FechaVencimiento == default(DateTime))
                                                 {
                                                     _pago.FechaVencimiento = _pago.FechaPago;
                                                 }
@@ -847,7 +1029,7 @@ namespace AdminPagosDLL.Core
                                             }
                                         }
 
-                                        if (_pago.FechaVencimiento== default(DateTime))
+                                        if (_pago.FechaVencimiento == default(DateTime))
                                         {
                                             foreach (string linea in lineas)
                                             {
@@ -866,17 +1048,17 @@ namespace AdminPagosDLL.Core
 
                                 else if (text.Contains("0001280445"))
                                 {
-                                    _pago.Ente = "Edesur";
+                                    _pago.Ente = EEnte.Edesur;
                                 }
 
                                 else if (text.Contains("2398966"))
                                 {
-                                    _pago.Ente = "Telecentro";
+                                    _pago.Ente = EEnte.Telecentro;
                                 }
 
                                 else if (text.Contains("MetroGAS"))
                                 {
-                                    _pago.Ente = "Metrogas";
+                                    _pago.Ente = EEnte.Metrogas;
 
                                     if (_pago.Importe == 0)
                                     {
@@ -885,7 +1067,7 @@ namespace AdminPagosDLL.Core
                                         _pago.Importe = decimal.Parse(importe.Replace("$", ""));
                                     }
 
-                                    if (_pago.FechaVencimiento== default(DateTime))
+                                    if (_pago.FechaVencimiento == default(DateTime))
                                     {
                                         int star = text.IndexOf("FECHA DE VENCIMIENTO");
                                         var fechaVto = text.Substring(star + 22, 10).Trim();
@@ -896,9 +1078,9 @@ namespace AdminPagosDLL.Core
 
                                 else if (text.Contains("ADM San Rafael"))
                                 {
-                                    _pago.Ente = "Exp San Rafael";
+                                    _pago.Ente = EEnte.ExpSanRafael;
 
-                                    if (_pago.FechaPago== default(DateTime))
+                                    if (_pago.FechaPago == default(DateTime))
                                     {
                                         foreach (var linea in lineas)
                                         {
@@ -968,16 +1150,6 @@ namespace AdminPagosDLL.Core
                                         }
                                     }
                                 }
-
-                                else if (text.Contains("101122140030"))
-                                {
-                                    _pago.Ente = "Municipalidad de Villa Gesell";
-                                }
-
-                                else if (text.Contains("00904022218"))
-                                {
-                                    _pago.Ente = "Edesur";
-                                }
                             }
 
                             // Validacion de fechas
@@ -985,8 +1157,8 @@ namespace AdminPagosDLL.Core
                             _pago.FechaVencimiento = _pago.FechaVencimiento == default(DateTime) ? _pago.FechaPago : _pago.FechaVencimiento;
 
                             if (_pago.Importe == 0)
-                            { 
-                                
+                            {
+
                             }
 
                             // Tipo de comprobante [ "Completo" ; "Reducido"]
@@ -1031,26 +1203,26 @@ namespace AdminPagosDLL.Core
                             else
                             {
                                 // Si no se encontró cotización de ese día
-                                
+
                                 // TODO: hacer algo si llega hasta acá
                             }
 
                             // Ente: abreviación de nombre
-                            if (_pago.Ente == "Agua y Saneamientos Argentinos")
-                            {
-                                _pago.Ente = "AySA";
-                            }
-                            else if (_pago.Ente == "Buenos Aires- Municipalidad de Villa Gesell")
-                            {
-                                _pago.Ente = "Municipalidad de Villa Gesell";
-                            }
-                            else if (_pago.Ente == "Buenos Aires- Municipalidad de Lanus")
-                            {
-                                _pago.Ente = "Municipalidad de Lanus";
-                            }
+                            //if (_pago.Ente == "Agua y Saneamientos Argentinos")
+                            //{
+                            //    _pago.Ente = "AySA";
+                            //}
+                            //else if (_pago.Ente == "Buenos Aires- Municipalidad de Villa Gesell")
+                            //{
+                            //    _pago.Ente = "Municipalidad de Villa Gesell";
+                            //}
+                            //else if (_pago.Ente == "Buenos Aires- Municipalidad de Lanus")
+                            //{
+                            //    _pago.Ente = "Municipalidad de Lanus";
+                            //}
 
                             //Si se cargaron datos válidos
-                            if (!String.IsNullOrEmpty(_pago.Ente) || _pago.FechaVencimiento != new DateTime() || _pago.Importe != 0)
+                            if (_pago.Ente != EEnte.Desconocido || _pago.FechaVencimiento != default(DateTime) || _pago.Importe != 0)
                             {
                                 // Valida que no haya otro similar
                                 bool existeSimilar = lstModelos.Any(p =>
@@ -1065,8 +1237,8 @@ namespace AdminPagosDLL.Core
                                     lstModelos.Add(_pago);
                                 }
                                 else
-                                { 
-                                
+                                {
+
                                 }
                             }
                             else
