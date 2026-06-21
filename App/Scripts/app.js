@@ -1,13 +1,3 @@
-Date.prototype.yyyymmdd = function () {
-    var mm = this.getMonth() + 1;
-    var dd = this.getDate();
-
-    return [this.getFullYear() + '-',
-        (mm > 9 ? '' : '0') + mm + '-',
-        (dd > 9 ? '' : '0') + dd
-    ].join('');
-};
-
 var convertContenedor = function (contenedor) {
     var objContenedor = null;
 
@@ -72,15 +62,13 @@ var limpiarMensajes = function (contenedor) {
 var table = null;
 
 function parseMvcDate(value) {
-    if (!value) {
-        return '';
-    }
+    if (!value) return '';
     var ticks = value.toString().replace('/Date(', '').replace(')/', '');
     var date = new Date(parseInt(ticks, 10));
-    if (isNaN(date.getTime())) {
-        return '';
-    }
-    return date.yyyymmdd();
+    if (isNaN(date.getTime())) return '';
+    var mm = date.getMonth() + 1;
+    var dd = date.getDate();
+    return date.getFullYear() + '-' + (mm > 9 ? '' : '0') + mm + '-' + (dd > 9 ? '' : '0') + dd;
 }
 
 function formatArs(value) {
@@ -123,19 +111,15 @@ function initTheme() {
     setTheme(theme);
 }
 
+var ESCAPE_MAP = { '&': '&amp;', '"': '&quot;', "'": '&#39;', '<': '&lt;', '>': '&gt;' };
+function escapeHtmlAttr(s) {
+    return (s || '').replace(/[&"'<>]/g, function (c) { return ESCAPE_MAP[c]; });
+}
+
+var REF_MAP = ['-', 'Yrigoyen', 'Nico', 'Norma', 'Tia Raquel', 'Tia Renee', 'Velez Sarsfield', 'Villa Gesell'];
 function getStringReference(nroRerence) {
     var nro = typeof nroRerence === 'string' ? parseInt(nroRerence, 10) : nroRerence;
-    switch (nro) {
-        case 0: return '-';
-        case 1: return 'Yrigoyen';
-        case 2: return 'Nico';
-        case 3: return 'Norma';
-        case 4: return 'Tia Raquel';
-        case 5: return 'Tia Renee';
-        case 6: return 'Velez Sarsfield';
-        case 7: return 'Villa Gesell';
-        default: return '-';
-    }
+    return (nro >= 0 && nro < REF_MAP.length) ? REF_MAP[nro] : '-';
 }
 
 var REFERENCIAS = [
@@ -195,7 +179,7 @@ function leerPdf(action) {
     setLoading(true);
     limpiarMensajes();
 
-    $('#dataTable').DataTable().rows().remove().draw(false);
+    table.clear().draw(false);
 
     $.ajax({
         url: '/Home/' + endpoint + '/',
@@ -206,12 +190,9 @@ function leerPdf(action) {
                 return;
             }
 
-            var t = $('#dataTable').DataTable();
-            t.rows().remove().draw(false);
-
-            respuesta.pagos.forEach(function (pago) {
-                var safePath = (pago.Path || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                t.row.add([
+            var data = respuesta.pagos.map(function (pago) {
+                var safePath = escapeHtmlAttr(pago.Path);
+                return [
                     pago.NroTransaccion,
                     pago.Ente,
                     pago.NroCliente,
@@ -224,8 +205,10 @@ function leerPdf(action) {
                     Number(pago.Importe) || 0,
                     Number(pago.ImporteDolar) || 0,
                     getStringReference(pago.Referencia)
-                ]).draw(true);
+                ];
             });
+
+            table.rows.add(data).draw();
 
             callBackLeerPdf();
 
@@ -258,8 +241,7 @@ function leerPdf(action) {
 }
 
 function callBackLeerPdf() {
-    var dt = $('#dataTable').DataTable();
-    dt.columns.adjust().draw(false);
+    table.columns.adjust().draw(false);
     totalizarPagos();
 }
 

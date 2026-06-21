@@ -39,30 +39,6 @@ namespace AdminPagosDLL.Core
             return System.IO.Path.Combine(appData, "pagos_serializados.json");
         }
 
-        private static DateTime? ObtenerFechaPdf(string fechaTxt)
-        {
-            if (string.IsNullOrEmpty(fechaTxt)) return null;
-
-            // 1. Sanitizamos la cadena: quitamos el prefijo "D:" y las comillas simples del offset
-            // "D:20190225182235-03'00'" -> "20190225182235-0300"
-            string textoLimpio = fechaTxt.Replace("D:", "").Replace("'", "");
-
-            // 2. Definimos los dos formatos posibles de metadatos PDF
-            string[] formatos = {
-                "yyyyMMddHHmmsszzz", // Con zona horaria (ej: 20190225182235-0300)
-                "yyyyMMddHHmmss"     // Sin zona horaria (ej: 20241104104351)
-            };
-
-            // 3. Parseamos usando DateTimeOffset para no perder la precisión horaria
-            if (DateTimeOffset.TryParseExact(textoLimpio, formatos, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTimeOffset resultadoOffset))
-            {
-                // Retornamos la fecha adaptada a la hora local del servidor
-                return resultadoOffset.LocalDateTime;
-            }
-
-            return null;
-        }
-
         #region Metodos Públicos
 
         public List<Pago> CargarPagos(string path = "", bool forceReinterpret = false)
@@ -123,14 +99,6 @@ namespace AdminPagosDLL.Core
                     return lstModelos;
                 }
 
-                ////Validacion de directorio
-                //Logger.Add("Existe rutaConfig?");
-                //if (!Directory.Exists(rutaConfig))
-                //{
-                //    Logger.Add("NO existe");
-                //    directorio = defecto;
-                //}
-
                 Logger.Add("\n Directorio a leer: " + directorio);
 
                 //Obtener todos los archivos, de extención .pdf en todos los subdirectorios de ...
@@ -185,11 +153,7 @@ namespace AdminPagosDLL.Core
                         continue;
                     }
 
-                    if (i == 991)
-                    {
-
-                    }
-                    if (path.Contains("MAS PAGOS\\agendaPagosLink (1).pdf"))
+                    if (path.Contains("V.G\\2018 EXPENSAS\\4-18  PAGO TRANF 9-4-18 EXP. VG..pdf"))
                     {
                         
                     }
@@ -223,8 +187,10 @@ namespace AdminPagosDLL.Core
 
                     }
 
-                    else if (nombreArchivo.ToLower().Contains("expensa") &&
-                        nombreArchivo.ToLower().Contains("san rafael"))
+                    else if (
+                        nombreArchivo.ToLower().Contains("expensa") && nombreArchivo.ToLower().Contains("san rafael")
+                        || (path.Contains("SAN RAFAEL") && nombreArchivo.ToLower().Contains("exp"))
+                        )
                     {
 
                         if (nombreArchivo.ToLower().Contains("movistar"))
@@ -308,10 +274,6 @@ namespace AdminPagosDLL.Core
                         bool leer = false;
                         text += PdfTextExtractor.GetTextFromPage(reader, pageRead);
 
-                        //----------------
-                        
-                        // Nueva version
-
                         // Validar que el texto contenga alguna de las frases aprobadas para asegurarnos de que es un comprobante de pago
                         var frasesOk = new List<string> { "pago efectuado", "pagos realizados", "operación realizada con éxito", 
                             "5º-A" , "metrogas", "San Rafael", "CONSORCIO DE COPROPIETARIOS EDIFICIO", "ungar", "20382717056"
@@ -391,51 +353,33 @@ namespace AdminPagosDLL.Core
 
                         using (StringReader readerTxt = new StringReader(text))
                         {
+                            string lineaAnterior = "";
+                            string line;
+                            int cantLineas = 0;
+
                             var _pago = new Models.PagoEfectuado();
                             _pago.Path = path;
 
-                            string lineaAnterior = "";
-                            string line;
+                            #region Nuevo formato Pdf: identifica formato
 
-                            string auxFechaPago = "";
-                            string auxHora = "";
-
-                            int cantLineas = 0;
-
-                            //----------------
                             bool newFormatPdf = false;
-                            try
+                            string textoOriginal = null;
+
+                            // 1. Intentamos leer "CreationDate". Si no existe, intentamos con "ModDate"
+                            if (!reader.Info.TryGetValue("CreationDate", out textoOriginal))
                             {
-                                string textoOriginal = null;
-
-                                // 1. Intentamos leer "CreationDate". Si no existe, intentamos con "ModDate"
-                                if (!reader.Info.TryGetValue("CreationDate", out textoOriginal))
-                                {
-                                    reader.Info.TryGetValue("ModDate", out textoOriginal);
-                                }
-
-                                // 2. Al llegar acá, 'textoOriginal' tendrá el valor de la primera que haya encontrado,
-                                // o seguirá siendo 'null' si no existía ninguna de las dos en los metadatos.
-                                DateTime? fecha = ObtenerFechaPdf(textoOriginal);
-
-                                if (
-                                    text.Contains("Operación realizada con éxito")
-                                    //|| fecha.HasValue && fecha.Value.Year > 2022
-                                )
-                                {
-                                    newFormatPdf = true;
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-
+                                reader.Info.TryGetValue("ModDate", out textoOriginal);
                             }
 
-                            //----------------
+                            if (text.Contains("Operación realizada con éxito"))
+                            {
+                                newFormatPdf = true;
+                            }
+
+                            #endregion
 
                             while ((line = readerTxt.ReadLine()) != null)
                             {
-                                // Do something with the line
                                 cantLineas++;
 
                                 var lineaFormato = line.Split(':');
@@ -475,29 +419,10 @@ namespace AdminPagosDLL.Core
                                 {
                                     case "Fecha de Transacción":
                                     case "Fecha de Pago":
-                                        auxFechaPago = valor;
-
-                                        if (!String.IsNullOrEmpty(auxFechaPago))
+                                        if (!String.IsNullOrEmpty(valor))
                                         {
-                                            _pago.FechaPago = format.CrearFecha(auxFechaPago);
+                                            _pago.FechaPago = format.CrearFecha(valor);
                                         }
-
-                                        break;
-                                    case "Hora":
-                                        auxHora = valor;
-
-                                        if (!String.IsNullOrEmpty(auxFechaPago))
-                                        {
-                                            //Le agrega la hora, minutos y segundos a la "Fecha de Pago"
-                                            int hora = int.Parse(lineaFormato[1]);
-                                            int min = int.Parse(lineaFormato[2]);
-                                            int sec = int.Parse(lineaFormato[3]);
-
-                                            _pago.FechaPago = _pago.FechaPago.AddHours(hora)
-                                                                   .AddMinutes(min)
-                                                                   .AddSeconds(sec);
-                                        }
-
                                         break;
                                     case "Código de seguridad":
                                     case "Código de Seguridad":
@@ -521,12 +446,6 @@ namespace AdminPagosDLL.Core
 
                                         if (!String.IsNullOrEmpty(_pago.Ente))
                                         {
-                                            if (!_pago.Ente.Contains("Lanus") &&
-                                            _pago.Ente.Contains("Buenos Aires- Municipalidad de"))
-                                            {
-
-                                            }
-
                                             //Si es comprobante Simple se completa el nombre del Ente
                                             if (_pago.Ente.Equals("Buenos Aires- Municipalidad de"))
                                             {
@@ -534,18 +453,16 @@ namespace AdminPagosDLL.Core
                                                 {
                                                     _pago.Ente += " Lanus";
                                                 }
-                                                if (_pago.NroCliente.Equals("0000000000445015012")) //muni-raquel
+                                                else if (_pago.NroCliente.Equals("0000000000445015012")) //muni-raquel
                                                 {
                                                     _pago.Ente += " Lanus";
                                                 }
-                                                if (_pago.NroCliente.Equals("101122140030"))
+                                                else if (_pago.NroCliente.Equals("101122140030"))
                                                 {
                                                     _pago.Ente += " Villa Gesell";
                                                 }
                                             }
                                         }
-
-                                        
                                         break;
                                     case "Código/Usuario":
                                     case "Codigo/Usuario":
@@ -578,12 +495,10 @@ namespace AdminPagosDLL.Core
                                         break;
                                     case "Fecha de Vencimiento":
                                     case "VTO":
-                                        //_pago.FechaVencimiento = format.CrearFecha(auxFechaPago);
                                         _pago.FechaVencimiento = format.CrearFecha(valor);
                                         break;
 
                                     case "FECHA VENCIMIENTO":
-                                        //_pago.FechaVencimiento = format.CrearFecha(auxFechaPago);
                                         _pago.FechaVencimiento = format.CrearFecha(valor, "dd/MM/yy");
                                         break;
 
@@ -598,7 +513,6 @@ namespace AdminPagosDLL.Core
                                         break;
                                     case "abonado":
 
-
                                         //Buenos Aires - Municipalidad de Lanus
                                         //Buenos Aires - Municipalidad de Villa Gesell
                                         if (lineaAnterior.Contains("Nombre del ente"))
@@ -612,18 +526,6 @@ namespace AdminPagosDLL.Core
                                         else
                                         {
                                             _pago.Ente = lineaAnterior;
-
-                                            ////Buenos Aires- Arba Inmobiliario
-                                            //if (lineaAnterior.Contains("Buenos Aires"))
-                                            //{
-                                            //    _pago.Ente = lineaAnterior;
-                                            //
-                                            //}
-                                            //else
-                                            //{
-                                            //    _pago.Ente = valor;
-                                            //}
-
                                         }
 
                                         break;
@@ -866,7 +768,7 @@ namespace AdminPagosDLL.Core
 
                                         }
 
-                                        if (_pago.FechaVencimiento == new DateTime())
+                                        if (_pago.FechaVencimiento== default(DateTime))
                                         {
                                             int star = text.IndexOf("SALDO A PAGAR AL");
                                             if (star != -1)
@@ -893,7 +795,7 @@ namespace AdminPagosDLL.Core
                                                     }
                                                 }
 
-                                                if (_pago.FechaVencimiento == new DateTime())
+                                                if (_pago.FechaVencimiento== default(DateTime))
                                                 {
                                                     _pago.FechaVencimiento = _pago.FechaPago;
                                                 }
@@ -945,7 +847,7 @@ namespace AdminPagosDLL.Core
                                             }
                                         }
 
-                                        if (_pago.FechaVencimiento == new DateTime())
+                                        if (_pago.FechaVencimiento== default(DateTime))
                                         {
                                             foreach (string linea in lineas)
                                             {
@@ -983,7 +885,7 @@ namespace AdminPagosDLL.Core
                                         _pago.Importe = decimal.Parse(importe.Replace("$", ""));
                                     }
 
-                                    if (_pago.FechaVencimiento == new DateTime())
+                                    if (_pago.FechaVencimiento== default(DateTime))
                                     {
                                         int star = text.IndexOf("FECHA DE VENCIMIENTO");
                                         var fechaVto = text.Substring(star + 22, 10).Trim();
@@ -996,7 +898,7 @@ namespace AdminPagosDLL.Core
                                 {
                                     _pago.Ente = "Exp San Rafael";
 
-                                    if (_pago.FechaPago == new DateTime())
+                                    if (_pago.FechaPago== default(DateTime))
                                     {
                                         foreach (var linea in lineas)
                                         {
@@ -1071,13 +973,23 @@ namespace AdminPagosDLL.Core
                                 {
                                     _pago.Ente = "Municipalidad de Villa Gesell";
                                 }
+
+                                else if (text.Contains("00904022218"))
+                                {
+                                    _pago.Ente = "Edesur";
+                                }
                             }
+
+                            // Validacion de fechas
+                            _pago.FechaPago = _pago.FechaPago == default(DateTime) ? _pago.FechaVencimiento : _pago.FechaPago;
+                            _pago.FechaVencimiento = _pago.FechaVencimiento == default(DateTime) ? _pago.FechaPago : _pago.FechaVencimiento;
 
                             if (_pago.Importe == 0)
                             { 
                                 
                             }
 
+                            // Tipo de comprobante [ "Completo" ; "Reducido"]
                             if (cantLineas > 8)
                             {
                                 _pago.TipoComprobante = ETipoComprobante.Completo;
@@ -1087,7 +999,7 @@ namespace AdminPagosDLL.Core
                                 _pago.TipoComprobante = ETipoComprobante.Reducido;
 
                                 //Se interpreta la fecha de vencimiento
-                                if (_pago.FechaVencimiento == new DateTime() && !String.IsNullOrEmpty(_pago.Cuota))
+                                if (_pago.FechaVencimiento == default(DateTime) && !String.IsNullOrEmpty(_pago.Cuota))
                                 {
                                     var variablesAux = _pago.Cuota.Split('/');
                                     var mesAux = int.Parse(variablesAux[0]);
@@ -1112,7 +1024,6 @@ namespace AdminPagosDLL.Core
                             var valCotizacion = (decimal)CotizacionHistorica.GetCotizacionPorFecha(_pago.FechaPago);
                             valCotizacion = valCotizacion != 0 ? valCotizacion : (decimal)CotizacionHistorica.GetCotizacionPorFecha(_pago.FechaVencimiento);
                             valCotizacion = valCotizacion != 0 ? valCotizacion : (decimal)CotizacionHistorica.GetCotizacionAnterior(_pago.FechaPago);
-
                             if (valCotizacion != 0)
                             {
                                 _pago.ImporteDolar = decimal.Round(_pago.Importe / valCotizacion, 2);
@@ -1120,24 +1031,19 @@ namespace AdminPagosDLL.Core
                             else
                             {
                                 // Si no se encontró cotización de ese día
-
-                                if (_pago.Referencia == EReferencia.VillaGesell)
-                                { 
                                 
-                                }
+                                // TODO: hacer algo si llega hasta acá
                             }
 
-
+                            // Ente: abreviación de nombre
                             if (_pago.Ente == "Agua y Saneamientos Argentinos")
                             {
                                 _pago.Ente = "AySA";
                             }
-
                             else if (_pago.Ente == "Buenos Aires- Municipalidad de Villa Gesell")
                             {
                                 _pago.Ente = "Municipalidad de Villa Gesell";
                             }
-
                             else if (_pago.Ente == "Buenos Aires- Municipalidad de Lanus")
                             {
                                 _pago.Ente = "Municipalidad de Lanus";
@@ -1146,7 +1052,6 @@ namespace AdminPagosDLL.Core
                             //Si se cargaron datos válidos
                             if (!String.IsNullOrEmpty(_pago.Ente) || _pago.FechaVencimiento != new DateTime() || _pago.Importe != 0)
                             {
-
                                 // Valida que no haya otro similar
                                 bool existeSimilar = lstModelos.Any(p =>
                                     ((PagoEfectuado)p).Ente == _pago.Ente &&
@@ -1168,7 +1073,6 @@ namespace AdminPagosDLL.Core
                             {
                                 noVal.Add(_pago);
                             }
-
                         }
                     }
 

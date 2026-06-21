@@ -1398,3 +1398,43 @@ La ruta parametrizada en el config () tuvo un error al intentar acceder, puede q
  Directorio a leer: D:\Norma\000   PAGOS\
 
  Directorio a leer: D:\Norma\000   PAGOS\
+
+ Directorio a leer: D:\Norma\000   PAGOS\
+
+ Directorio a leer: D:\Norma\000   PAGOS\
+
+ Directorio a leer: D:\Norma\000   PAGOS\
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2020-07-EXP.'
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2020-08--exp.JULIO'
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2020-10-exp'
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2021-02-xx'
+
+ Directorio a leer: D:\Norma\000   PAGOS\
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2020-07-EXP.'
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2020-08--exp.JULIO'
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2020-10-exp'
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2021-02-xx'
+
+ Directorio a leer: D:\Norma\000   PAGOS\
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2020-07-EXP.'
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2020-08--exp.JULIO'
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2020-10-exp'
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2021-02-xx'
+
+ Directorio a leer: D:\Norma\000   PAGOS\
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2020-07-EXP.'
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2020-08--exp.JULIO'
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2020-10-exp'
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2021-02-xx'
+
+ Directorio a leer: D:\Norma\000   PAGOS\
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2020-07-EXP.'
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2020-08--exp.JULIO'
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2020-10-exp'
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2021-02-xx'
+
+ Directorio a leer: D:\Norma\000   PAGOS\
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2020-07-EXP.'
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2020-08--exp.JULIO'
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2020-10-exp'
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2021-02-xx'
