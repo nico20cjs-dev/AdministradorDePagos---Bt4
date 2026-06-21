@@ -76,7 +76,7 @@ function formatArs(value) {
 }
 
 function formatUsd(value) {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(value || 0);
+    return 'USD ' + new Intl.NumberFormat('es-AR', { style: 'decimal', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value || 0);
 }
 
 function setLoading(isLoading) {
@@ -137,7 +137,7 @@ function renderRefCards(totals) {
     REFERENCIAS.forEach(function (r) {
         var t = totals[r.key];
         if (!t.ars && !t.usd) return;
-        html += '<article class="stat-card stat-card-ref">';
+        html += '<article class="stat-card stat-card-ref" data-card="ref:' + r.key + '">';
         html += '<p class="stat-label">' + r.icon + ' ' + r.key + '</p>';
         html += '<p class="stat-value-ref-ars">' + formatArs(t.ars) + '</p>';
         html += '<p class="stat-value-ref-usd">USD ' + new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(t.usd || 0) + '</p>';
@@ -183,6 +183,73 @@ function updateFilterIndicator() {
     });
     var globalSearchActive = !!($('.dataTables_filter input').val());
     $('#btnToggleFiltros').toggleClass('btn-toggle--filtered', !!(sidebarActive || colFilterActive || globalSearchActive));
+}
+
+var _detalleRows = [];
+
+function openDetalleModal(label, rows) {
+    _detalleRows = rows;
+    $('#detalleTitulo').text('Detalle: ' + label);
+    renderDetalleTable($('#detalleGroupBy').val());
+    $('#modalDetalle').removeAttr('aria-hidden');
+    $('body').addClass('no-scroll');
+}
+
+function closeDetalleModal() {
+    $('#modalDetalle').attr('aria-hidden', 'true');
+    $('body').removeClass('no-scroll');
+}
+
+function renderDetalleTable(groupBy) {
+    var groups = {};
+    var rows = _detalleRows;
+
+    rows.each(function (item) {
+        var key;
+        if (groupBy === 'year') {
+            var fecha = (item[8] || '').toString();
+            key = fecha.substring(0, 4) || 'Sin fecha';
+        } else {
+            key = (item[1] || 'Desconocido').toString();
+        }
+        if (!groups[key]) groups[key] = { count: 0, ars: 0, usd: 0 };
+        groups[key].count++;
+        groups[key].ars += Number(item[9]) || 0;
+        groups[key].usd += Number(item[10]) || 0;
+    });
+
+    var keys = Object.keys(groups);
+    if (keys.length === 0) {
+        $('#detalleTableWrap').html('<p class="stats-ref-empty">Sin datos</p>');
+        return;
+    }
+
+    keys.sort(groupBy === 'year'
+        ? function (a, b) { return b.localeCompare(a); }
+        : function (a, b) { return a.localeCompare(b); });
+
+    var totalCount = 0, totalArs = 0, totalUsd = 0;
+    var colGroup = groupBy === 'year' ? 'Año' : 'Ente';
+    var html = '<table class="detalle-table">' +
+        '<thead><tr><th>' + colGroup + '</th><th class="num">Cant Pagos</th><th class="num">Total $</th><th class="num">Total USD</th></tr></thead><tbody>';
+
+    keys.forEach(function (k) {
+        var g = groups[k];
+        html += '<tr><td>' + escapeHtmlAttr(k) + '</td>' +
+            '<td class="num">' + g.count + '</td>' +
+            '<td class="num">' + formatArs(g.ars) + '</td>' +
+            '<td class="num">' + formatUsd(g.usd) + '</td></tr>';
+        totalCount += g.count;
+        totalArs += g.ars;
+        totalUsd += g.usd;
+    });
+
+    html += '</tbody><tfoot><tr class="total-row"><td>Total</td>' +
+        '<td class="num">' + totalCount + '</td>' +
+        '<td class="num">' + formatArs(totalArs) + '</td>' +
+        '<td class="num">' + formatUsd(totalUsd) + '</td></tr></tfoot></table>';
+
+    $('#detalleTableWrap').html(html);
 }
 
 function leerPdf(action) {
@@ -397,8 +464,28 @@ $(document).ready(function () {
     $('#modalFallos').on('click', function (e) {
         if (e.target === this) cerrarModalFallos();
     });
+
+    $('.stats-grid-ref').on('click', '.stat-card-ref', function () {
+        var refName = $(this).data('card').replace('ref:', '');
+        var dt = $('#dataTable').dataTable().api();
+        var allRows = dt.rows({ search: 'applied' }).data();
+        var filtered = allRows.filter(function (r) { return r[11] === refName; });
+        openDetalleModal(refName, filtered);
+    });
+
+    $('#modalDetalleCerrar, #modalDetalleCerrarBtn').on('click', closeDetalleModal);
+    $('#modalDetalle').on('click', function (e) {
+        if (e.target === this) closeDetalleModal();
+    });
+    $('#detalleGroupBy').on('change', function () {
+        renderDetalleTable($(this).val());
+    });
+
     $(document).on('keydown', function (e) {
         if (e.key === 'Escape') {
+            if (!$('#modalDetalle').attr('aria-hidden')) {
+                closeDetalleModal();
+            }
             cerrarModalFallos();
             var panel = $('#filtersPanel');
             if (!panel.hasClass('is-collapsed')) {

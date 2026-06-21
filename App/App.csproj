@@ -138,6 +138,7 @@
     <Content Include="Scripts\app.js" />
     <Content Include="log.txt" />
     <Content Include="App_Data\cotizacionesHistoricas.json" />
+    <Content Include="App_Data\usdInflactionFactors.json" />
     <None Include="Properties\PublishProfiles\FolderProfile.pubxml" />
     <Content Include="Scripts\jquery-3.5.1.js" />
     <Content Include="Scripts\jquery-3.5.1.min.js" />

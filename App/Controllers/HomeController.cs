@@ -112,6 +112,16 @@ namespace AdminPagosDLL.Controllers
 
             if (!rutaHabilitada)
             {
+                var fallosPaths = (MemoryCache.Default.Get(NoAbiertosPathsCacheKey) as List<string> ?? new List<string>())
+                    .Concat(MemoryCache.Default.Get(NoIdentificadosPathsCacheKey) as List<string> ?? new List<string>())
+                    .Concat(MemoryCache.Default.Get(NoValPathsCacheKey) as List<string> ?? new List<string>());
+                rutaHabilitada = fallosPaths.Any(p =>
+                    !String.IsNullOrWhiteSpace(p) &&
+                    String.Equals(System.IO.Path.GetFullPath(p), reportPath, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (!rutaHabilitada)
+            {
                 return new HttpStatusCodeResult(HttpStatusCode.Forbidden, "Archivo no autorizado.");
             }
 

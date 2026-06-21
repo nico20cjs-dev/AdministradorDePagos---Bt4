@@ -940,6 +940,10 @@ table.dataTable.no-footer {
     }
 }
 
+.stat-card-ref {
+    cursor: pointer;
+}
+
 .btn-toggle--filtered {
     border-color: var(--accent);
     background: color-mix(in srgb, var(--accent) 10%, var(--surface-2));
@@ -957,4 +961,70 @@ table.dataTable.no-footer {
     border-radius: 50%;
     background: var(--accent);
     box-shadow: 0 0 6px var(--accent);
+}
+
+/* ---- Modal de detalle ---- */
+
+.modal-panel-detalle {
+    max-width: 800px;
+}
+
+.detalle-toolbar {
+    margin-bottom: 1rem;
+}
+
+.detalle-toolbar label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text);
+}
+
+.detalle-toolbar select {
+    border: 1px solid var(--line);
+    border-radius: 0.45rem;
+    background: var(--surface);
+    color: var(--text);
+    padding: 0.3rem 0.6rem;
+}
+
+.detalle-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.detalle-table th,
+.detalle-table td {
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--line);
+}
+
+.detalle-table th {
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.detalle-table td {
+    color: var(--text);
+}
+
+.detalle-table .num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.detalle-table tbody tr:hover {
+    background: var(--surface-2);
+}
+
+.detalle-table .total-row td {
+    font-weight: 700;
+    border-top: 2px solid var(--line);
+    color: var(--text);
 }

@@ -189,6 +189,30 @@
         </div>
     </div>
 
+    <div id="modalDetalle" class="modal-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Detalle de referencia">
+        <div class="modal-panel modal-panel-detalle">
+            <header class="modal-header">
+                <h2 id="detalleTitulo"></h2>
+                <button id="modalDetalleCerrar" class="modal-close" type="button" aria-label="Cerrar" title="Cerrar ventana">&times;</button>
+            </header>
+            <div class="modal-body">
+                <div class="detalle-toolbar">
+                    <label>
+                        <span>Agrupar por</span>
+                        <select id="detalleGroupBy">
+                            <option value="year">Año</option>
+                            <option value="ente">Ente</option>
+                        </select>
+                    </label>
+                </div>
+                <div id="detalleTableWrap"></div>
+            </div>
+            <footer class="modal-footer">
+                <button id="modalDetalleCerrarBtn" class="btn btn-ghost" type="button">Cerrar</button>
+            </footer>
+        </div>
+    </div>
+
     @Scripts.Render("~/bundles/appscripts")
 
 </body>
