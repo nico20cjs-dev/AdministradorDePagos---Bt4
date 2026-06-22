@@ -325,7 +325,7 @@ namespace AdminPagosDLL.Core
                         continue;
                     }
 
-                    if (path.Contains("00100250089457\\2 0 2 6 - A R B A\\2026-02-05 ARBA vto.19-2.pdf"))
+                    if (path.Contains("2012  al 2025 - EDESUR\\2 0 2 5 desde abr.25\\2025-12-01 EDESUR (Nico) vto.1-12.pdf"))
                     {
 
                     }

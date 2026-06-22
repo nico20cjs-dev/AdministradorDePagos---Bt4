@@ -564,13 +564,10 @@ $(document).ready(function () {
         $(this).html('<input type="text" placeholder="Buscar ' + title + '" />');
     });
 
-    var _savedStateLoaded = false;
-
     table = $('#dataTable').DataTable({
         stateSave: true,
         stateLoadParams: function (settings, data) {
-            if (data) {
-                _savedStateLoaded = true;
+            if (data && data.time) {
                 if (data.advancedFilters) {
                     $('#selectReference').val(data.advancedFilters.selectReference || '');
                     $('#selectEnte').val(data.advancedFilters.selectEnte || '');
@@ -616,10 +613,8 @@ $(document).ready(function () {
         },
         initComplete: function () {
             var api = this.api();
-            if (!_savedStateLoaded) {
-                api.columns([0, 2, 3, 5, 7]).visible(false, false);
-                api.columns.adjust().draw(false);
-            }
+            api.columns([0, 2, 3, 5, 7]).visible(false, false);
+            api.columns.adjust().draw(false);
             api.columns().every(function () {
                 var that = this;
                 var debounceTimer;
