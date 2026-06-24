@@ -119,6 +119,24 @@ function initTheme() {
     setTheme(theme);
 }
 
+function setFontSize(size) {
+    document.documentElement.setAttribute('data-font', size);
+    localStorage.setItem('adp-font', size);
+    var isLarge = size === 'large';
+    $('#fontToggle').attr('aria-pressed', isLarge ? 'true' : 'false')
+        .attr('title', 'Cambiar tamaño de texto')
+        .html(
+            '<svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><polyline points="4 7 4 4 20 4 20 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="9" y1="20" x2="15" y2="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="4" x2="12" y2="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>' +
+            '<span>' + (isLarge ? 'Texto grande' : 'Texto normal') + '</span>'
+        );
+}
+
+function initFontSize() {
+    var size = localStorage.getItem('adp-font');
+    if (size !== 'large') size = 'normal';
+    setFontSize(size);
+}
+
 var ESCAPE_MAP = { '&': '&amp;', '"': '&quot;', "'": '&#39;', '<': '&lt;', '>': '&gt;' };
 function escapeHtmlAttr(s) {
     return (s || '').replace(/[&"'<>]/g, function (c) { return ESCAPE_MAP[c]; });
@@ -455,10 +473,16 @@ function cerrarModalInfoUsd() {
 
 $(document).ready(function () {
     initTheme();
+    initFontSize();
 
     $('#themeToggle').on('click', function () {
         var current = document.documentElement.getAttribute('data-theme');
         setTheme(current === 'dark' ? 'light' : 'dark');
+    });
+
+    $('#fontToggle').on('click', function () {
+        var current = document.documentElement.getAttribute('data-font');
+        setFontSize(current === 'large' ? 'normal' : 'large');
     });
 
     $('#btnToggleFiltros').on('click', function () {

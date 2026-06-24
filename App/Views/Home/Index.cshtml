@@ -15,6 +15,10 @@
             if (t !== 'dark' && t !== 'light') t = 'dark';
             document.documentElement.setAttribute('data-theme', t);
             if (t === 'dark') document.querySelector('meta[name=theme-color]').content = '#0b1220';
+
+            var f = localStorage.getItem('adp-font');
+            if (f !== 'large') f = 'normal';
+            document.documentElement.setAttribute('data-font', f);
         })();
     </script>
 
@@ -39,6 +43,10 @@
                 <button id="themeToggle" class="btn btn-ghost" type="button" aria-pressed="false" title="Alternar entre modo oscuro y claro">
                     <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.39 5.39 0 0 1-4.4 2.26 5.38 5.38 0 0 1-5.38-5.38 5.39 5.39 0 0 1 2.26-4.4A9.05 9.05 0 0 0 12 3Z"/></svg>
                     <span>Modo oscuro</span>
+                </button>
+                <button id="fontToggle" class="btn btn-ghost" type="button" aria-pressed="false" title="Cambiar tamaño de texto">
+                    <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><polyline points="4 7 4 4 20 4 20 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="9" y1="20" x2="15" y2="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="4" x2="12" y2="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    <span>Texto normal</span>
                 </button>
                 <button id="btnActualizarPdf" class="btn btn-primary" type="button" title="Actualizar la lista de pagos desde los comprobantes PDF">
                     <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M1 4v6h6m16 10v-6h-6M3.51 15a9 9 0 0 0 14.85 3.36l-2.12-2.12a5.5 5.5 0 0 1-8.37-.74M20.49 9a9 9 0 0 0-14.85-3.36l2.12 2.12a5.5 5.5 0 0 1 8.37.74"/></svg>

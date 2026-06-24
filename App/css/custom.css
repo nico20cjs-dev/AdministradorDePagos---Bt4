@@ -30,6 +30,10 @@ html[data-theme='dark'] {
     --shadow: 0 10px 34px rgba(0, 0, 0, 0.35);
 }
 
+html[data-font="large"] {
+    font-size: 130%;
+}
+
 * {
     box-sizing: border-box;
 }
