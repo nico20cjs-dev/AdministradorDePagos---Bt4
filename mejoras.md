@@ -17,6 +17,8 @@ Las siguientes mejoras ya fueron realizadas en sesiones anteriores y se eliminan
 - **Doble enumeración de directorio eliminada** — `EnumerateFiles` + `Count()` + `ToList()` reemplazado por `GetFiles().ToList()` único.
 - **Código muerto eliminado** — Propiedad `ImporteEnDolares` y referencias `System.Drawing`, `System.Web.DynamicData`, `System.Web.Entity`, `System.Web.Extensions`, `System.Web.Services` del `.csproj`.
 - **Lógica duplicada de inflación factorizada** — Bloque de inflación + ente display extraído a método `AplicarInflacionYEnteDisplay()`.
+- **WebClient reemplazado por HttpClient** — `_httpClient` estático reutilizable, evita crear/destruir conexiones en cada request.
+- **Regex compilados** — 6 patrones regex extraídos a campos `static readonly` con `RegexOptions.Compiled` para evitar recompilar en cada uso.
 
 ---
 
@@ -98,38 +100,9 @@ El mecanismo 1 se llama `TryMapClienteData`, el mecanismo 2 se ejecuta después.
 
 ---
 
-#### 6. Reemplazar WebClient por HttpClient
-
-**Problema:** `HomeController.InicializarCotizacionHistorica()` usa `WebClient` (deprecado desde .NET Framework 4.5+).
-
-**Solución:** Reemplazar por `HttpClient`. Además agregar timeout configurable y manejo de errores más robusto.
-
-**Archivos:**
-- `App/Controllers/HomeController.cs`
-
-**Esfuerzo:** Bajo
-
----
-
-#### 7. Compilar Regex para mejorar performance
-
-**Problema:** Varios patrones regex se usan dentro de loops en `InterpretarPDF()` sin compilar (`Regex.Match`, `Regex.Replace`). En cada iteración se parsea el string del patrón de nuevo.
-
-**Solución:** Declarar como `static readonly Regex` compilados:
-```csharp
-private static readonly Regex _patronImporte = new Regex(@"...", RegexOptions.Compiled);
-```
-
-**Archivos:**
-- `AdminPagosDLL/Core/Funciones.cs`
-
-**Esfuerzo:** Bajo
-
----
-
 ### 🟢 Baja prioridad
 
-#### 8. Botón de exportación a CSV
+#### 6. Botón de exportación a CSV
 
 **Problema:** No hay forma de exportar los datos filtrados de la tabla.
 
@@ -144,7 +117,7 @@ private static readonly Regex _patronImporte = new Regex(@"...", RegexOptions.Co
 
 ---
 
-#### 9. Tema oscuro/claro respetando preferencia del sistema
+#### 7. Tema oscuro/claro respetando preferencia del sistema
 
 **Problema:** En la primer visita siempre se forza dark mode. No respeta `prefers-color-scheme` del navegador.
 
@@ -157,7 +130,7 @@ private static readonly Regex _patronImporte = new Regex(@"...", RegexOptions.Co
 
 ---
 
-#### 10. Operaciones I/O asincrónicas
+#### 8. Operaciones I/O asincrónicas
 
 **Problema:** Todas las operaciones de archivo, red y PDF parsing son síncronas. En un app single-user no es crítico, pero bloquea el thread de IIS.
 
@@ -172,7 +145,7 @@ private static readonly Regex _patronImporte = new Regex(@"...", RegexOptions.Co
 
 ---
 
-#### 11. Filtros con un clic por propiedad (pills)
+#### 9. Filtros con un clic por propiedad (pills)
 
 **Problema:** Hoy hay que abrir sidebar → dropdown → elegir. No hay acceso rápido.
 
@@ -187,7 +160,7 @@ private static readonly Regex _patronImporte = new Regex(@"...", RegexOptions.Co
 
 ---
 
-#### 12. Modo "Texto grande" (accesibilidad)
+#### 10. Modo "Texto grande" (accesibilidad)
 
 **Problema:** La tabla usa fuentes de 0.72rem a 0.85rem. Para una usuaria de 72 años es pequeño.
 
@@ -202,7 +175,7 @@ private static readonly Regex _patronImporte = new Regex(@"...", RegexOptions.Co
 
 ---
 
-#### 13. Filtros por tipo de servicio
+#### 11. Filtros por tipo de servicio
 
 **Problema:** No hay forma de filtrar por categoría de servicio (luz, gas, agua, etc.).
 
@@ -217,7 +190,7 @@ private static readonly Regex _patronImporte = new Regex(@"...", RegexOptions.Co
 
 ---
 
-#### 14. Exportar resumen a PDF o imprimir
+#### 12. Exportar resumen a PDF o imprimir
 
 **Problema:** No hay vista imprimible del resumen.
 
@@ -232,7 +205,7 @@ private static readonly Regex _patronImporte = new Regex(@"...", RegexOptions.Co
 
 ---
 
-#### 15. Auto-guardado de filtros activos como "vista"
+#### 13. Auto-guardado de filtros activos como "vista"
 
 **Problema:** No hay forma de guardar combinaciones de filtros con nombre.
 
@@ -248,7 +221,7 @@ private static readonly Regex _patronImporte = new Regex(@"...", RegexOptions.Co
 
 ---
 
-#### 16. Contraste mejorado en modo claro
+#### 14. Contraste mejorado en modo claro
 
 **Problema:** `--muted: #64748b` sobre fondo blanco tiene ratio ~4.5:1. Para adulto mayor conviene ~7:1.
 
@@ -269,18 +242,16 @@ private static readonly Regex _patronImporte = new Regex(@"...", RegexOptions.Co
 | 2  | Toggles faltantes               | Muy bajo | 🔴 Alta | 1-2      |
 | 3  | Unificar ClienteMap             | Medio    | 🟡 Media | 1       |
 | 4  | Refactor InterpretarPDF         | Alto     | 🟡 Media | 1       |
-| 5  | WebClient → HttpClient          | Bajo     | 🟡 Media | 1       |
-| 6  | Regex compilados                | Bajo     | 🟡 Media | 1       |
-| 7  | Exportación CSV                 | Medio    | 🟢 Baja  | 3       |
-| 8  | prefers-color-scheme            | Muy bajo | 🟢 Baja  | 1       |
-| 9  | Async I/O                       | Medio    | 🟢 Baja  | 3       |
-| 10 | Pills de propiedad              | Bajo     | 🟡 Media | 3       |
-| 11 | Modo texto grande               | Muy bajo | 🟡 Media | 3       |
-| 12 | Pills por servicio              | Bajo     | 🟢 Baja  | 3       |
-| 13 | Imprimir resumen                | Medio    | 🟢 Baja  | 3       |
-| 14 | Guardar vistas                  | Medio    | 🟢 Baja  | 4       |
-| 15 | Contraste mejorado              | Muy bajo | 🟢 Baja  | 1       |
+| 5  | Exportación CSV                 | Medio    | 🟢 Baja  | 3       |
+| 6  | prefers-color-scheme            | Muy bajo | 🟢 Baja  | 1       |
+| 7  | Async I/O                       | Medio    | 🟢 Baja  | 3       |
+| 8  | Pills de propiedad              | Bajo     | 🟡 Media | 3       |
+| 9  | Modo texto grande               | Muy bajo | 🟡 Media | 3       |
+| 10 | Pills por servicio              | Bajo     | 🟢 Baja  | 3       |
+| 11 | Imprimir resumen                | Medio    | 🟢 Baja  | 3       |
+| 12 | Guardar vistas                  | Medio    | 🟢 Baja  | 4       |
+| 13 | Contraste mejorado              | Muy bajo | 🟢 Baja  | 1       |
 
 ---
 
-**Orden sugerido:** 1 → 2 → 3 → 4 → 5 → 6 → 10 → 11 → 12 → 7 → 13 → 8 → 9 → 15 → 14
+**Orden sugerido:** 1 → 2 → 3 → 4 → 8 → 9 → 10 → 5 → 11 → 6 → 7 → 13 → 12

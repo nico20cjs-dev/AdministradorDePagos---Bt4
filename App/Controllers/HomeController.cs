@@ -10,11 +10,16 @@ using System.Net;
 using System.Diagnostics;
 using Newtonsoft.Json;
 using System.Globalization;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System.IO;
 
 namespace AdminPagosDLL.Controllers
 {
     public class HomeController : Controller
     {
+        private static readonly HttpClient _httpClient = new HttpClient();
+
         public FMensaje Mensajes = new FMensaje();
 
         private const string PagosCacheKey = "PagosCache";
@@ -27,13 +32,13 @@ namespace AdminPagosDLL.Controllers
         private const string NoValPathsCacheKey = "NoValPaths";
         private const string UsdInflationFactorsCacheKey = "UsdInflationFactors";
 
-        public ActionResult Index()
+        public async Task<ActionResult> Index()
         {
-            InicializarCotizacionHistorica();
+            await InicializarCotizacionHistoricaAsync();
             return View();
         }
 
-        private void InicializarCotizacionHistorica()
+        private async Task InicializarCotizacionHistoricaAsync()
         {
             Mensajes.Limpiar();
 
@@ -51,16 +56,15 @@ namespace AdminPagosDLL.Controllers
                 var cachePath = Server.MapPath("~/App_Data/cotizacionesHistoricas.json");
                 if (System.IO.File.Exists(cachePath))
                 {
-                    json = System.IO.File.ReadAllText(cachePath);
+                    using (var reader = new StreamReader(cachePath))
+                        json = await reader.ReadToEndAsync();
                 }
 
                 if (String.IsNullOrWhiteSpace(json))
                 {
-                    using (var client = new WebClient())
-                    {
-                        json = client.DownloadString("https://apis.datos.gob.ar/series/api/series/?ids=168.1_T_CAMBIOR_D_0_0_26&limit=5000&format=json");
-                    }
-                    System.IO.File.WriteAllText(cachePath, json);
+                    json = await _httpClient.GetStringAsync("https://apis.datos.gob.ar/series/api/series/?ids=168.1_T_CAMBIOR_D_0_0_26&limit=5000&format=json");
+                    using (var writer = new StreamWriter(cachePath, false))
+                        await writer.WriteAsync(json);
                 }
 
                 cache.Set(CotizacionCacheKey, json, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
@@ -109,14 +113,53 @@ namespace AdminPagosDLL.Controllers
             return factors;
         }
 
-        private Dictionary<string, decimal> GetUsdInflationFactors()
+        public static async Task<Dictionary<string, decimal>> PrecomputeMonthlyFactorsAsync(string jsonFilePath)
+        {
+            if (!System.IO.File.Exists(jsonFilePath))
+                return new Dictionary<string, decimal>();
+
+            string json;
+            using (var reader = new StreamReader(jsonFilePath))
+                json = await reader.ReadToEndAsync();
+            var rawRates = JsonConvert.DeserializeObject<Dictionary<string, double?>>(json);
+            if (rawRates == null || rawRates.Count == 0)
+                return new Dictionary<string, decimal>();
+
+            var monthlyRates = rawRates
+                .Where(kvp => kvp.Value.HasValue)
+                .Select(kvp => new
+                {
+                    Month = DateTime.ParseExact(kvp.Key, "yyyy-MM", CultureInfo.InvariantCulture),
+                    Rate = kvp.Value.Value
+                })
+                .OrderByDescending(m => m.Month)
+                .ToList();
+
+            if (monthlyRates.Count == 0)
+                return new Dictionary<string, decimal>();
+
+            var latestMonth = monthlyRates.First().Month;
+            var factors = new Dictionary<string, decimal>();
+            double runningMultiplier = 1.0;
+            factors[latestMonth.ToString("yyyy-MM")] = 1.0m;
+
+            foreach (var item in monthlyRates.Skip(1))
+            {
+                runningMultiplier *= 1.0 + item.Rate / 100.0;
+                factors[item.Month.ToString("yyyy-MM")] = (decimal)Math.Round(runningMultiplier, 4);
+            }
+
+            return factors;
+        }
+
+        private async Task<Dictionary<string, decimal>> GetUsdInflationFactorsAsync()
         {
             var cache = MemoryCache.Default;
             var factors = cache.Get(UsdInflationFactorsCacheKey) as Dictionary<string, decimal>;
             if (factors != null) return factors;
 
             var path = Server.MapPath("~/App_Data/usdInflactionFactors.json");
-            factors = PrecomputeMonthlyFactors(path);
+            factors = await PrecomputeMonthlyFactorsAsync(path);
             if (factors.Count > 0)
             {
                 cache.Set(UsdInflationFactorsCacheKey, factors, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
@@ -124,9 +167,9 @@ namespace AdminPagosDLL.Controllers
             return factors;
         }
 
-        private void AplicarInflacionYEnteDisplay(List<Pago> pagos)
+        private async Task AplicarInflacionYEnteDisplayAsync(List<Pago> pagos)
         {
-            var inflationFactors = GetUsdInflationFactors();
+            var inflationFactors = await GetUsdInflationFactorsAsync();
             foreach (var pe in pagos.OfType<PagoEfectuado>())
             {
                 pe.EnteDisplayText = Funciones.GetEnteDisplayText(pe.Ente);
@@ -142,7 +185,7 @@ namespace AdminPagosDLL.Controllers
         /// </summary>
         /// <param name="path">Ruta de ubicación del pdf.</param>
         /// <returns></returns>
-        public ActionResult GetReport(string path)
+        public async Task<ActionResult> GetReport(string path)
         {
             if (String.IsNullOrWhiteSpace(path))
             {
@@ -198,7 +241,12 @@ namespace AdminPagosDLL.Controllers
                 return HttpNotFound("No se encontró el comprobante solicitado.");
             }
 
-            byte[] fileBytes = System.IO.File.ReadAllBytes(reportPath);
+            byte[] fileBytes;
+            using (var stream = new FileStream(reportPath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true))
+            {
+                fileBytes = new byte[stream.Length];
+                await stream.ReadAsync(fileBytes, 0, fileBytes.Length);
+            }
             return File(fileBytes, "application/pdf");
         }
 
@@ -206,17 +254,16 @@ namespace AdminPagosDLL.Controllers
         /// Lee y procesa todos los Pdfs.
         /// </summary>
         /// <returns></returns>
-        public JsonResult LeerPDF(bool forceReinterpret = false)
+        public async Task<JsonResult> LeerPDF(bool forceReinterpret = false)
         {
             Mensajes.Limpiar();
 
             var cache = MemoryCache.Default;
             var pagos = cache.Get(PagosCacheKey) as List<Pago>;
 
-            //Primero lee la cache (saltear si forceReinterpret)
             if (!forceReinterpret && pagos != null && pagos.Count > 0)
             {
-                AplicarInflacionYEnteDisplay(pagos);
+                await AplicarInflacionYEnteDisplayAsync(pagos);
                 return Json(new {
                     Mensajes,
                     pagos,
@@ -232,7 +279,7 @@ namespace AdminPagosDLL.Controllers
             try
             {
                 var funcion = new Funciones();
-                pagos = funcion.CargarPagos(forceReinterpret: forceReinterpret);
+                pagos = await funcion.CargarPagosAsync(forceReinterpret: forceReinterpret);
 
                 if (funcion.Mensajes.Lista.Any())
                 {
@@ -249,7 +296,7 @@ namespace AdminPagosDLL.Controllers
                 cache.Set(NoAbiertosPathsCacheKey, funcion.NoAbiertosPaths, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
                 cache.Set(NoIdentificadosPathsCacheKey, funcion.NoIdentificadosPaths, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
                 cache.Set(NoValPathsCacheKey, noValPaths, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
-                AplicarInflacionYEnteDisplay(pagos);
+                await AplicarInflacionYEnteDisplayAsync(pagos);
                 return Json(new {
                     Mensajes,
                     pagos,
@@ -272,13 +319,12 @@ namespace AdminPagosDLL.Controllers
         /// Lee y procesa todos los Pdfs.
         /// </summary>
         /// <returns></returns>
-        public JsonResult ActualizarPDF()
+        public async Task<JsonResult> ActualizarPDF()
         {
             Mensajes.Limpiar();
 
             try
             {
-                //Borra la cache en memoria, no la serialización
                 MemoryCache.Default.Remove(PagosCacheKey);
                 MemoryCache.Default.Remove(CantNoAbiertosCacheKey);
                 MemoryCache.Default.Remove(CantNoIdentificadosCacheKey);
@@ -288,9 +334,9 @@ namespace AdminPagosDLL.Controllers
                 MemoryCache.Default.Remove(NoValPathsCacheKey);
                 MemoryCache.Default.Remove(UsdInflationFactorsCacheKey);
 
-                Funciones.BorrarSerializacion();
+                await Funciones.BorrarSerializacionAsync();
 
-                return LeerPDF(forceReinterpret: true);
+                return await LeerPDF(forceReinterpret: true);
             }
             catch (Exception ex)
             {

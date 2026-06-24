@@ -10,6 +10,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace AdminPagosDLL.Core
@@ -25,6 +26,13 @@ namespace AdminPagosDLL.Core
         public FMensaje Mensajes = new FMensaje();
         private static readonly string ArchivoSerializacion = GetSerializacionPath();
         private static readonly ConcurrentDictionary<string, DateTime> _fileTimestamps = new ConcurrentDictionary<string, DateTime>();
+
+        private static readonly Regex _regexEspacios = new Regex(@"\s+", RegexOptions.Compiled);
+        private static readonly Regex _regexImporteTransaccion = new Regex(@"(?<transaccion>\$\s*\d+(?:\.\d{3})*,\d{2})\s+Número de transacción", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex _regexSaldoAPagar = new Regex(@"\$(?:\s|\u00A0)*(?<importe>\d+(?:,\d{3})*\.\d{2})", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex _regexFechaTransaccion = new Regex(@"Fecha de la Transacción:\s*(?<fecha>\d{2}/\d{2}/\d{4})", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex _regexImporteUngar = new Regex(@"(?<importe>\d+(?:\.\d{3})*,\d{2})\b\s*$", RegexOptions.Compiled);
+        private static readonly Regex _regexVencimientoImporte = new Regex(@"(\d{2}/\d{2}/\d{4})\s+([\d\.]+,\d{2})", RegexOptions.Compiled);
 
         private static string GetSerializacionPath()
         {
@@ -98,7 +106,7 @@ namespace AdminPagosDLL.Core
             // Si no encuentra coincidencia exacta, busca palabras clave
 
             // Limpiar el texto: trim, espacios múltiples, convertir a minúsculas
-            cleanText = Regex.Replace(line.Trim(), @"\s+", " ");
+            cleanText = _regexEspacios.Replace(line.Trim(), " ");
 
             // Diccionario de palabras clave por Ente
             var enteKeywords = new Dictionary<EEnte, string[]>
@@ -642,9 +650,7 @@ namespace AdminPagosDLL.Core
                                     case "Importe":
                                     case "IMPORTE":
 
-                                        string patron = @"(?<transaccion>\$\s*\d+(?:\.\d{3})*,\d{2})\s+Número de transacción";
-
-                                        Match match = Regex.Match(text, patron, RegexOptions.IgnoreCase);
+                                        Match match = _regexImporteTransaccion.Match(text);
 
                                         if (match.Success)
                                         {
@@ -924,10 +930,7 @@ namespace AdminPagosDLL.Core
                                             {
                                                 if (linea.StartsWith("SALDO A PAGAR"))
                                                 {
-                                                    //string patron = @"\$\s*(?<importe>\d+\.\d{2})";
-                                                    string patron = @"\$(?:\s|\u00A0)*(?<importe>\d+(?:,\d{3})*\.\d{2})";
-
-                                                    Match match = Regex.Match(linea, patron, RegexOptions.IgnoreCase);
+                                                    Match match = _regexSaldoAPagar.Match(linea);
 
                                                     if (match.Success)
                                                     {
@@ -964,9 +967,7 @@ namespace AdminPagosDLL.Core
                                                 {
                                                     if (fila.Contains("Fecha de la Transacció"))
                                                     {
-                                                        string patron = @"Fecha de la Transacción:\s*(?<fecha>\d{2}/\d{2}/\d{4})";
-
-                                                        Match match = Regex.Match(text, patron, RegexOptions.IgnoreCase);
+                                                        Match match = _regexFechaTransaccion.Match(text);
 
                                                         if (match.Success)
                                                         {
@@ -997,7 +998,6 @@ namespace AdminPagosDLL.Core
 
                                             // 2. Buscamos el patrón exacto línea por línea
                                             // ^\s*6\s+D'AQUILA de forma estricta al inicio de la fila
-                                            string patronImporte = @"(?<importe>\d+(?:\.\d{3})*,\d{2})\b\s*$";
 
                                             foreach (string linea in lineas)
                                             {
@@ -1005,7 +1005,7 @@ namespace AdminPagosDLL.Core
                                                 if (linea.StartsWith("6 DPTO"))
                                                 {
                                                     // Una vez parados en la línea correcta, extraemos el ÚLTIMO importe de esa fila
-                                                    Match matchImporte = Regex.Match(linea, patronImporte);
+                                                    Match matchImporte = _regexImporteUngar.Match(linea);
                                                     if (matchImporte.Success)
                                                     {
                                                         try
@@ -1110,10 +1110,7 @@ namespace AdminPagosDLL.Core
 
                                             if (linea.StartsWith("1er Vencimiento"))
                                             {
-                                                var match = Regex.Match(
-                                                    linea,
-                                                    @"(\d{2}/\d{2}/\d{4})\s+([\d\.]+,\d{2})"
-                                                );
+                                                var match = _regexVencimientoImporte.Match(linea);
 
                                                 if (match.Success)
                                                 {
@@ -1332,6 +1329,91 @@ namespace AdminPagosDLL.Core
             catch (Exception)
             {
             }
+        }
+
+        public async Task<List<Pago>> CargarPagosAsync(string path = "", bool forceReinterpret = false)
+        {
+            if (!forceReinterpret)
+            {
+                try
+                {
+                    var datos = await DeSerializeDatosAsync();
+                    if (datos != null && datos.Pagos.Count > 0 && datos.Pagos[0] is PagoEfectuado)
+                    {
+                        lstModelos = datos.Pagos;
+                        noVal = datos.NoValidos;
+                        NoAbiertosPaths = datos.NoAbiertosPaths;
+                        NoIdentificadosPaths = datos.NoIdentificadosPaths;
+                        CantNoAbiertos = NoAbiertosPaths.Count;
+                        CantNoIdentificados = NoIdentificadosPaths.Count;
+                        return lstModelos;
+                    }
+                }
+                catch
+                {
+                }
+            }
+
+            return await Task.Run(() => InterpretarPDF(path));
+        }
+
+        public async Task SerializarDatosAsync()
+        {
+            try
+            {
+                var datos = new DatosSerializados
+                {
+                    Pagos = lstModelos,
+                    NoValidos = noVal,
+                    NoAbiertosPaths = NoAbiertosPaths,
+                    NoIdentificadosPaths = NoIdentificadosPaths
+                };
+
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(ArchivoSerializacion));
+                string json = JsonConvert.SerializeObject(datos, new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.Auto
+                });
+                using (var writer = new StreamWriter(ArchivoSerializacion, false))
+                    await writer.WriteAsync(json);
+            }
+            catch
+            {
+            }
+        }
+
+        public static async Task<DatosSerializados> DeSerializeDatosAsync()
+        {
+            if (!File.Exists(ArchivoSerializacion)) return null;
+
+            try
+            {
+                string json;
+                using (var reader = new StreamReader(ArchivoSerializacion))
+                    json = await reader.ReadToEndAsync();
+                return JsonConvert.DeserializeObject<DatosSerializados>(json, new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.Auto
+                });
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public static Task BorrarSerializacionAsync()
+        {
+            try
+            {
+                if (File.Exists(ArchivoSerializacion))
+                    File.Delete(ArchivoSerializacion);
+                _fileTimestamps.Clear();
+            }
+            catch (Exception)
+            {
+            }
+            return Task.CompletedTask;
         }
 
         #endregion

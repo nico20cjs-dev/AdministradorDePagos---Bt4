@@ -17,7 +17,7 @@ namespace AdminPagosDLL.Core
             var file = System.IO.Path.Combine(strExeFilePath, "log.txt");
             ;
             if (!File.Exists(file))
-                File.Create(file);
+                using (File.Create(file)) { }
 
             using (StreamWriter sw = new StreamWriter(file, true))
             {
