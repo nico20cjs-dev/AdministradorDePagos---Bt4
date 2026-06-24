@@ -274,9 +274,8 @@ namespace AdminPagosDLL.Core
                 Logger.Add("\n Directorio a leer: " + directorio);
 
                 //Obtener todos los archivos, de extención .pdf en todos los subdirectorios de ...
-                var files = Directory.EnumerateFiles(directorio, "*.pdf", SearchOption.AllDirectories);
-                int cantidadArchivos = files.Count();
-                var lstArchivos = files.ToList();
+                var lstArchivos = Directory.GetFiles(directorio, "*.pdf", SearchOption.AllDirectories).ToList();
+                int cantidadArchivos = lstArchivos.Count;
 
                 // Cargar estado previo para skip de archivos sin cambios
                 DatosSerializados oldState = null;

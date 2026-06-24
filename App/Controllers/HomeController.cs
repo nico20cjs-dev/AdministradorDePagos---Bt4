@@ -124,6 +124,19 @@ namespace AdminPagosDLL.Controllers
             return factors;
         }
 
+        private void AplicarInflacionYEnteDisplay(List<Pago> pagos)
+        {
+            var inflationFactors = GetUsdInflationFactors();
+            foreach (var pe in pagos.OfType<PagoEfectuado>())
+            {
+                pe.EnteDisplayText = Funciones.GetEnteDisplayText(pe.Ente);
+                if (inflationFactors.TryGetValue(pe.FechaPago.ToString("yyyy-MM"), out var factor))
+                    pe.ImporteDolarActualizado = decimal.Round(pe.ImporteDolar * factor, 2);
+                else
+                    pe.ImporteDolarActualizado = pe.ImporteDolar;
+            }
+        }
+
         /// <summary>
         /// Devuelve el comprobante de pago
         /// </summary>
@@ -203,15 +216,7 @@ namespace AdminPagosDLL.Controllers
             //Primero lee la cache (saltear si forceReinterpret)
             if (!forceReinterpret && pagos != null && pagos.Count > 0)
             {
-                var inflationFactors = GetUsdInflationFactors();
-                foreach (var pe in pagos.OfType<PagoEfectuado>())
-                {
-                    pe.EnteDisplayText = Funciones.GetEnteDisplayText(pe.Ente);
-                    if (inflationFactors.TryGetValue(pe.FechaPago.ToString("yyyy-MM"), out var factor))
-                        pe.ImporteDolarActualizado = decimal.Round(pe.ImporteDolar * factor, 2);
-                    else
-                        pe.ImporteDolarActualizado = pe.ImporteDolar;
-                }
+                AplicarInflacionYEnteDisplay(pagos);
                 return Json(new {
                     Mensajes,
                     pagos,
@@ -244,15 +249,7 @@ namespace AdminPagosDLL.Controllers
                 cache.Set(NoAbiertosPathsCacheKey, funcion.NoAbiertosPaths, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
                 cache.Set(NoIdentificadosPathsCacheKey, funcion.NoIdentificadosPaths, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
                 cache.Set(NoValPathsCacheKey, noValPaths, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
-                var inflationFactors = GetUsdInflationFactors();
-                foreach (var pe in pagos.OfType<PagoEfectuado>())
-                {
-                    pe.EnteDisplayText = Funciones.GetEnteDisplayText(pe.Ente);
-                    if (inflationFactors.TryGetValue(pe.FechaPago.ToString("yyyy-MM"), out var factor))
-                        pe.ImporteDolarActualizado = decimal.Round(pe.ImporteDolar * factor, 2);
-                    else
-                        pe.ImporteDolarActualizado = pe.ImporteDolar;
-                }
+                AplicarInflacionYEnteDisplay(pagos);
                 return Json(new {
                     Mensajes,
                     pagos,
