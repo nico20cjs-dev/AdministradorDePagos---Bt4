@@ -53,7 +53,7 @@ namespace AdminPagosDLL.Core
         /// </summary>
         /// <param name="line">Línea de texto a analizar</param>
         /// <returns>EEnte identificado o EEnte.Desconocido si no encuentra coincidencia</returns>
-        private EEnte IdentifyEnte(string line)
+        internal EEnte IdentifyEnte(string line)
         {
             if (string.IsNullOrWhiteSpace(line))
                 return EEnte.Desconocido;
@@ -136,7 +136,7 @@ namespace AdminPagosDLL.Core
         /// <summary>
         /// Extrae el Ente de una línea que contiene "Nombre del Ente Abonado: [texto]"
         /// </summary>
-        private EEnte ExtractEnteFromLine(string line)
+        internal EEnte ExtractEnteFromLine(string line)
         {
             //if (!line.Contains("Nombre del Ente Abonado"))
             //    return EEnte.Desconocido;
@@ -149,7 +149,7 @@ namespace AdminPagosDLL.Core
             return IdentifyEnte(enteText);
         }
 
-        private static readonly Dictionary<string, (EEnte Ente, EReferencia Referencia)> ClienteMap =
+        internal static readonly Dictionary<string, (EEnte Ente, EReferencia Referencia)> ClienteMap =
             new Dictionary<string, (EEnte, EReferencia)>
             {
                 { "0000000000104243024", (EEnte.MunicipalidadLanus, EReferencia.Yrigoyen) },
@@ -202,7 +202,7 @@ namespace AdminPagosDLL.Core
                 { "08620382717056", (EEnte.Claro, EReferencia.Guille) }
             };
 
-        private bool TryMapClienteData(string nroCliente, out (EEnte Ente, EReferencia Referencia) clienteData)
+        internal bool TryMapClienteData(string nroCliente, out (EEnte Ente, EReferencia Referencia) clienteData)
         {
             return ClienteMap.TryGetValue(nroCliente, out clienteData);
         }
@@ -280,6 +280,11 @@ namespace AdminPagosDLL.Core
                     path = lstArchivos[i];
 
                     string nombreArchivo = System.IO.Path.GetFileName(path);
+
+                    if (path.Contains("Norma\\000   PAGOS\\X X X X X X X X X\\tia CONCE\\2022\\METROGAS\\2022-05-26 Metrogas vto.26-5.pdf"))
+                    { 
+                    
+                    }
 
                     // Skip archivos sin cambios si tenemos estado previo
                     if (hasCache && oldState != null && _fileTimestamps.TryGetValue(path, out var lastWrite) && lastWrite == File.GetLastWriteTimeUtc(path))
@@ -679,7 +684,7 @@ namespace AdminPagosDLL.Core
         /// <summary>
         /// Indica si el texto extraído corresponde a un comprobante de pago válido.
         /// </summary>
-        private bool EsComprobantePago(string texto, string nombreArchivo)
+        internal bool EsComprobantePago(string texto, string nombreArchivo)
         {
             if (String.IsNullOrEmpty(texto))
                 return false;
@@ -736,32 +741,88 @@ namespace AdminPagosDLL.Core
         /// </summary>
         private PagoEfectuado ProcesarTextoComprobante(string text, string path, string nombreArchivo, PdfReader reader, Formatos format, bool ifExpensasHY)
         {
+            var pago = new PagoEfectuado();
+            pago.Path = path;
+
+            bool newFormatPdf = false;
+            string textoOriginal = null;
+            if (!reader.Info.TryGetValue("CreationDate", out textoOriginal))
+            {
+                reader.Info.TryGetValue("ModDate", out textoOriginal);
+            }
+            if (text.Contains("Operación realizada con éxito"))
+            {
+                newFormatPdf = true;
+            }
+
+            int cantLineas = 0;
+
+            if (ifExpensasHY)
+            {
+                ParsearExpensasHY(pago, text, nombreArchivo, format);
+            }
+            else
+            {
+                cantLineas = ParsearLineasEstandar(pago, text, format, newFormatPdf);
+            }
+
+            ResolverReferencia(pago, text, nombreArchivo);
+            ResolverEnteFallback(pago, text, path, nombreArchivo, reader, format);
+            AplicarValidacionesFinales(pago, cantLineas);
+
+            return pago;
+        }
+
+        internal void ParsearExpensasHY(PagoEfectuado pago, string text, string nombreArchivo, Formatos format)
+        {
+            using (StringReader readerTxt = new StringReader(text))
+            {
+                string line;
+                while ((line = readerTxt.ReadLine()) != null)
+                {
+                    var lineaFormato = line.Split(':');
+                    string clave = lineaFormato[0];
+
+                    try
+                    {
+                        if (!clave.Contains("016"))
+                        {
+                            continue;
+                        }
+
+                        if (clave.Contains("016"))
+                        {
+                            var valores = clave.Split(' ');
+                            pago.Referencia = EReferencia.Norma;
+                            pago.Ente = EEnte.ExpSanRafael;
+
+                            pago.Importe = decimal.Parse(valores.Last().Replace("$", ""));
+                            pago.FechaPago = format.CrearFecha(nombreArchivo.Split(' ').FirstOrDefault());
+                            pago.FechaVencimiento = pago.FechaPago;
+                            break;
+                        }
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+                }
+            }
+        }
+
+        internal int ParsearLineasEstandar(PagoEfectuado pago, string text, Formatos format, bool newFormatPdf)
+        {
             using (StringReader readerTxt = new StringReader(text))
             {
                 string lineaAnterior = "";
                 string line;
                 int cantLineas = 0;
+                bool isComprobanteMP = false;
 
-                var _pago = new Models.PagoEfectuado();
-                _pago.Path = path;
-
-                #region Nuevo formato Pdf: identifica formato
-
-                bool newFormatPdf = false;
-                string textoOriginal = null;
-
-                // 1. Intentamos leer "CreationDate". Si no existe, intentamos con "ModDate"
-                if (!reader.Info.TryGetValue("CreationDate", out textoOriginal))
+                if (text.Contains("Comprobante de pago") && text.Contains("Pagaste a") && text.Contains("Total pagado") && text.Contains("Detalle de operación"))
                 {
-                    reader.Info.TryGetValue("ModDate", out textoOriginal);
+                    isComprobanteMP = true;
                 }
-
-                if (text.Contains("Operación realizada con éxito"))
-                {
-                    newFormatPdf = true;
-                }
-
-                #endregion
 
                 while ((line = readerTxt.ReadLine()) != null)
                 {
@@ -773,40 +834,13 @@ namespace AdminPagosDLL.Core
                     valor = lineaFormato.Count() > 1 ? lineaFormato[1] : "";
                     valor = valor.Trim();
 
-                    if (ifExpensasHY)
-                    {
-                        try
-                        {
-                            if (!clave.Contains("016"))
-                            {
-                                continue;
-                            }
-
-                            if (clave.Contains("016"))
-                            {
-                                var valores = clave.Split(' ');
-                                _pago.Referencia = EReferencia.Norma;
-                                _pago.Ente = EEnte.ExpSanRafael;
-
-                                _pago.Importe = decimal.Parse(valores.Last().Replace("$", ""));
-                                _pago.FechaPago = format.CrearFecha(nombreArchivo.Split(' ').FirstOrDefault());
-                                _pago.FechaVencimiento = _pago.FechaPago;
-                                break;
-                            }
-                        }
-                        catch (Exception)
-                        {
-
-                        }
-                    }
-
                     switch (clave.Trim())
                     {
                         case "Fecha de Transacción":
                         case "Fecha de Pago":
                             if (!String.IsNullOrEmpty(valor))
                             {
-                                _pago.FechaPago = format.CrearFecha(valor);
+                                pago.FechaPago = format.CrearFecha(valor);
                             }
                             break;
                         case "Código de seguridad":
@@ -816,11 +850,11 @@ namespace AdminPagosDLL.Core
                             //Si es comprobante Simple
                             if (!String.IsNullOrEmpty(valor))
                             {
-                                _pago.NroTransaccion = valor;
+                                pago.NroTransaccion = valor;
                             }
                             else //Si es comprobante Completo
                             {
-                                _pago.NroTransaccion = lineaAnterior;
+                                pago.NroTransaccion = lineaAnterior;
                             }
 
                             break;
@@ -830,15 +864,15 @@ namespace AdminPagosDLL.Core
                         case "Nro de Cliente":
                         case "NRO. DE CLIENTE":
 
-                            _pago.NroCliente = valor;
+                            pago.NroCliente = valor;
 
-                            if (_pago.Ente == EEnte.Desconocido)
+                            if (pago.Ente == EEnte.Desconocido)
                             {
                                 // Si no se pudo identificar el Ente se calcula por el Nro de cliente
-                                if (TryMapClienteData(_pago.NroCliente, out var clienteData))
+                                if (TryMapClienteData(pago.NroCliente, out var clienteData))
                                 {
-                                    _pago.Ente = clienteData.Ente;
-                                    _pago.Referencia = clienteData.Referencia;
+                                    pago.Ente = clienteData.Ente;
+                                    pago.Referencia = clienteData.Referencia;
                                 }
                             }
                             break;
@@ -846,7 +880,7 @@ namespace AdminPagosDLL.Core
                         case "Nro de cuenta débito":
                         case "NRO DE CUENTA":
                         case "Cuenta a debitar":
-                            _pago.NroCtaDebito = valor;
+                            pago.NroCtaDebito = valor;
                             break;
                         case "Importe":
                         case "IMPORTE":
@@ -857,32 +891,32 @@ namespace AdminPagosDLL.Core
                             {
                                 // Extrae el importe completo (ej: "$ 10.669,06")
                                 string importeCompleto = match.Groups["transaccion"].Value;
-                                _pago.Importe = decimal.Parse(importeCompleto.Replace("$", ""));
+                                pago.Importe = decimal.Parse(importeCompleto.Replace("$", ""));
                             }
                             else
                             {
-                                _pago.Importe = decimal.Parse(valor.Replace("$", ""));
+                                pago.Importe = decimal.Parse(valor.Replace("$", ""));
                             }
 
 
                             break;
                         case "Fecha de Vencimiento":
                         case "VTO":
-                            _pago.FechaVencimiento = format.CrearFecha(valor);
+                            pago.FechaVencimiento = format.CrearFecha(valor);
                             break;
 
                         case "FECHA VENCIMIENTO":
-                            _pago.FechaVencimiento = format.CrearFecha(valor, "dd/MM/yy");
+                            pago.FechaVencimiento = format.CrearFecha(valor, "dd/MM/yy");
                             break;
 
                         case "CUOTA":
                         case "Cuota":
                         case "Cuota/Año":
                             //006/17
-                            _pago.Cuota = valor;
+                            pago.Cuota = valor;
                             break;
                         case "Pago de":
-                            _pago.Ente = ExtractEnteFromLine(valor);
+                            pago.Ente = ExtractEnteFromLine(valor);
                             break;
                         case "abonado":
 
@@ -902,11 +936,11 @@ namespace AdminPagosDLL.Core
                                 }
 
                                 // Parse case-insensitive
-                                _pago.Ente = ExtractEnteFromLine(enteText);
+                                pago.Ente = ExtractEnteFromLine(enteText);
                             }
                             catch (ArgumentException)
                             {
-                                _pago.Ente = EEnte.Desconocido; // Valor por defecto si no coincide
+                                pago.Ente = EEnte.Desconocido; // Valor por defecto si no coincide
                                                                 // O lanzar excepción si prefieres: throw new InvalidOperationException($"Ente no reconocido: {lineaAnterior}");
                             }
 
@@ -915,14 +949,14 @@ namespace AdminPagosDLL.Core
                         case "Nombre Originante":
                             if (valor.Contains("NORMA D AQUILA"))
                             {
-                                _pago.Referencia = EReferencia.Norma;
+                                pago.Referencia = EReferencia.Norma;
                             }
                             break;
                         case "Nombre del destinatario":
 
                             if (valor.Contains("CONSORCIO DE COPROPIETARIOS EDIFICIO"))
                             {
-                                _pago.Ente = EEnte.ExpUngar;
+                                pago.Ente = EEnte.ExpUngar;
                             }
                             break;
 
@@ -932,24 +966,42 @@ namespace AdminPagosDLL.Core
                             {
                                 if (lineaAnterior == "Operación realizada con éxito")
                                 {
-                                    _pago.FechaPago = format.CrearFecha(line);
+                                    pago.FechaPago = format.CrearFecha(line);
                                 }
                                 if (line.Contains("Número de transacción"))
                                 {
                                     var resultado = format.CrearFecha(lineaAnterior);
                                     if (resultado != DateTime.MinValue)
                                     {
-                                        _pago.FechaPago = resultado;
+                                        pago.FechaPago = resultado;
                                         var valores = line.Split(' ');
-                                        _pago.NroTransaccion = valores[valores.Length - 2];
+                                        pago.NroTransaccion = valores[valores.Length - 2];
                                     }
                                 }
                             }
 
-                            //Comprobante de MP
-                            if (lineaAnterior == "Pagaste a")
+                            // Comprobante de MP
+                            if (isComprobanteMP)
                             {
-                                _pago.Ente = ExtractEnteFromLine(clave);
+                                if (lineaAnterior == "Pagaste a")
+                                {
+                                    pago.Ente = ExtractEnteFromLine(clave);
+                                }
+                                else if (lineaAnterior == "Pagador Fecha de pago" ||
+                                    lineaAnterior == "Pagador final Pago es")
+                                {
+                                    if (pago.FechaPago == default(DateTime))
+                                    {
+                                        string pattern = @"\d{2}/\d{2}/\d{4}";
+
+                                        Match match2 = Regex.Match(clave, pattern);
+
+                                        if (match2.Success)
+                                        {
+                                            pago.FechaPago = format.CrearFecha(match2.Value);
+                                        }
+                                    }                                    
+                                }
                             }
 
                             break;
@@ -958,19 +1010,14 @@ namespace AdminPagosDLL.Core
                     lineaAnterior = line;
                 }
 
-                ResolverReferencia(_pago, text, nombreArchivo);
-
-                ResolverEnteFallback(_pago, text, path, nombreArchivo, reader, format);
-                AplicarValidacionesFinales(_pago, cantLineas);
-
-                return _pago;
+                return cantLineas;
             }
         }
 
         /// <summary>
         /// Aplica validaciones finales de fechas, tipo de comprobante y cotización en dólares.
         /// </summary>
-        private void AplicarValidacionesFinales(PagoEfectuado pago, int cantLineas)
+        internal void AplicarValidacionesFinales(PagoEfectuado pago, int cantLineas)
         {
             // Validacion de fechas
             pago.FechaPago = pago.FechaPago == default(DateTime) ? pago.FechaVencimiento : pago.FechaPago;
@@ -1032,7 +1079,7 @@ namespace AdminPagosDLL.Core
         /// <summary>
         /// Resuelve la referencia/propiedad del pago a partir del número de cliente o del contenido textual.
         /// </summary>
-        private void ResolverReferencia(PagoEfectuado pago, string text, string nombreArchivo)
+        internal void ResolverReferencia(PagoEfectuado pago, string text, string nombreArchivo)
         {
             if (!String.IsNullOrEmpty(pago.NroCliente) && pago.Referencia == EReferencia.Desconocido)
             {
@@ -1069,12 +1116,21 @@ namespace AdminPagosDLL.Core
                 {
                     pago.Referencia = EReferencia.Norma;
                 }
+                else if (pago.Path.ToLower().Contains("conce"))
+                { 
+                    //TODO: si entra acá hacer alto
+                }
+
+                else
+                {
+                    //TODO: si entra acá hacer alto
+                }
             }
         }
         /// <summary>
         /// Intenta identificar el ente y completar datos cuando no se pudo determinar por el parsing estándar.
         /// </summary>
-        private void ResolverEnteFallback(PagoEfectuado pago, string text, string path, string nombreArchivo, PdfReader reader, Formatos format)
+        internal void ResolverEnteFallback(PagoEfectuado pago, string text, string path, string nombreArchivo, PdfReader reader, Formatos format)
         {
             if (pago.Ente == EEnte.Desconocido)
             {

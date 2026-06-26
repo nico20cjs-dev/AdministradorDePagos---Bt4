@@ -95,6 +95,10 @@ function setLoading(isLoading) {
         button.prop('disabled', true).text('Actualizando...');
         state.text('Procesando comprobantes...');
         spinner.addClass('is-active').attr('aria-hidden', 'false');
+        $('#pesosCalculados').text('-');
+        $('#dolaresCalculados').text('-');
+        $('#dolaresActualizadosCalculados').text('-');
+        $('.stats-grid-ref').html('');
     } else {
         button.prop('disabled', false).attr('title', 'Actualizar la lista de pagos desde los comprobantes PDF').html('<svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M1 4v6h6m16 10v-6h-6M3.51 15a9 9 0 0 0 14.85 3.36l-2.12-2.12a5.5 5.5 0 0 1-8.37-.74M20.49 9a9 9 0 0 0-14.85-3.36l2.12 2.12a5.5 5.5 0 0 1 8.37.74"/></svg><span>Actualizar pagos</span>');
         state.text('Listo');
@@ -590,18 +594,25 @@ $(document).ready(function () {
 
     table = $('#dataTable').DataTable({
         stateSave: true,
-        stateLoadParams: function (settings, data) {
-            if (data && data.time) {
-                if (data.advancedFilters) {
-                    $('#selectReference').val(data.advancedFilters.selectReference || '');
-                    $('#selectEnte').val(data.advancedFilters.selectEnte || '');
+            stateLoadParams: function (settings, data) {
+                if (data && data.time) {
+                    if (data.advancedFilters) {
+                        $('#selectReference').val(data.advancedFilters.selectReference || '');
+                        $('#selectEnte').val(data.advancedFilters.selectEnte || '');
+                    }
+                    if (data.filtersCollapsed) {
+                        $('#filtersPanel').addClass('is-collapsed');
+                        $('#btnToggleFiltros').attr('aria-expanded', 'false').text('Mostrar filtros');
+                    }
+                    if (data.columns) {
+                        for (var i = 0; i < data.columns.length; i++) {
+                            if (data.columns[i].search) {
+                                data.columns[i].search.search = '';
+                            }
+                        }
+                    }
                 }
-                if (data.filtersCollapsed) {
-                    $('#filtersPanel').addClass('is-collapsed');
-                    $('#btnToggleFiltros').attr('aria-expanded', 'false').text('Mostrar filtros');
-                }
-            }
-        },
+            },
         stateSaveParams: function (settings, data) {
             data.advancedFilters = {
                 selectReference: $('#selectReference').val(),
@@ -652,7 +663,7 @@ $(document).ready(function () {
                     }.bind(this), 300);
                 });
                 // Sincronizar el input con la búsqueda restaurada por stateSave
-                $('input', this.footer()).val(that.search());
+                $('input', this.footer()).val('');
             });
             $('.dataTables_filter input').on('input', updateFilterIndicator);
             updateFilterIndicator();
