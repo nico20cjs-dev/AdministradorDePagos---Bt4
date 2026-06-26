@@ -379,6 +379,8 @@ function reprocesarPago(path, buttonEl) {
     $btn.prop('disabled', true);
     limpiarMensajes();
 
+    var currentPage = table.page.info().page;
+
     $.ajax({
         url: '/Home/ReprocesarPago',
         data: { path: path },
@@ -387,7 +389,9 @@ function reprocesarPago(path, buttonEl) {
                 table.clear();
 
                 var data = mapPagosToData(respuesta.pagos);
-                table.rows.add(data).draw();
+                table.rows.add(data);
+                var totalPages = Math.ceil(table.rows().count() / table.page.info().length);
+                table.page(Math.min(currentPage, totalPages > 0 ? totalPages - 1 : 0)).draw(false);
 
                 callBackLeerPdf();
 

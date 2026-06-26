@@ -53,7 +53,7 @@ namespace AdminPagosDLL.Core
         /// </summary>
         /// <param name="line">Línea de texto a analizar</param>
         /// <returns>EEnte identificado o EEnte.Desconocido si no encuentra coincidencia</returns>
-        internal EEnte IdentifyEnte(string line)
+        internal EEnte IdentifyEnte(string line, PagoEfectuado pago = null, string text = null)
         {
             if (string.IsNullOrWhiteSpace(line))
                 return EEnte.Desconocido;
@@ -90,6 +90,16 @@ namespace AdminPagosDLL.Core
             else if (cleanText == "metrogas".ToLower())
             {
                 return EEnte.Metrogas;
+            }
+            else if (cleanText == "cablevision".ToLower())
+            {
+                return EEnte.Cablevision;
+            }
+
+            else if (!String.IsNullOrEmpty(text) && text.Contains("CABLEVISION") &&
+                pago != null && pago.Path.ToLower().Contains("raquel"))
+            {
+                return EEnte.Cablevision;
             }
 
             // Intenta parse directo primero
@@ -136,7 +146,7 @@ namespace AdminPagosDLL.Core
         /// <summary>
         /// Extrae el Ente de una línea que contiene "Nombre del Ente Abonado: [texto]"
         /// </summary>
-        internal EEnte ExtractEnteFromLine(string line)
+        internal EEnte ExtractEnteFromLine(string line, PagoEfectuado pago = null, string text = null)
         {
             //if (!line.Contains("Nombre del Ente Abonado"))
             //    return EEnte.Desconocido;
@@ -146,7 +156,7 @@ namespace AdminPagosDLL.Core
                 .Replace("Nombre del Ente Abonado", "")
                 .Trim();
 
-            return IdentifyEnte(enteText);
+            return IdentifyEnte(enteText, pago, text);
         }
 
         internal static readonly Dictionary<string, (EEnte Ente, EReferencia Referencia)> ClienteMap =
@@ -1066,7 +1076,7 @@ namespace AdminPagosDLL.Core
                             {
                                 if (lineaAnterior == "Pagaste a")
                                 {
-                                    pago.Ente = ExtractEnteFromLine(clave);
+                                    pago.Ente = ExtractEnteFromLine(clave, pago, text);
                                 }
                                 else if (lineaAnterior == "Pagador Fecha de pago" ||
                                     lineaAnterior == "Pagador final Pago es")
@@ -1181,8 +1191,7 @@ namespace AdminPagosDLL.Core
                 {
                     pago.Referencia = EReferencia.VillaGesell;
                 }
-                else if (text.Contains("20902705060")
-                    || nombreArchivo.ToLower().Contains("nico"))
+                else if (text.Contains("20902705060"))
                 {
                     pago.Referencia = EReferencia.Nico;
                 }
@@ -1203,6 +1212,14 @@ namespace AdminPagosDLL.Core
                     //Codigo usuario: "3860000075504"
                 }
 
+                else if (text.Contains("Cablevisión") && pago.Path.ToLower().Contains("raquel"))
+                {
+                    pago.Referencia = EReferencia.TiaRaquel;
+                }
+                else if (text.Contains("nico"))
+                {
+                    pago.Referencia = EReferencia.Nico;
+                }
                 else
                 {
                     //TODO: si entra acá hacer alto

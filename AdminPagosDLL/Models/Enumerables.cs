@@ -42,4 +42,5 @@ public enum EEnte
     Movistar = 12,
     Telecentro = 13,
     Telefonica = 14,
+    Cablevision = 15,
 }
