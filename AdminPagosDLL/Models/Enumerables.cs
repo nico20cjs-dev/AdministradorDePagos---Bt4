@@ -21,7 +21,8 @@ public enum EReferencia
     TiaRaquel,
     TiaRenee,
     VelezSarsfield,
-    VillaGesell
+    VillaGesell,
+    Guille
 }
 
 public enum EEnte

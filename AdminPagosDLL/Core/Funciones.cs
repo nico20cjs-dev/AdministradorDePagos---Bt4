@@ -153,17 +153,15 @@ namespace AdminPagosDLL.Core
             new Dictionary<string, (EEnte, EReferencia)>
             {
                 { "0000000000104243024", (EEnte.MunicipalidadLanus, EReferencia.Yrigoyen) },
-
-                { "20199489345", (EEnte.Claro, EReferencia.Norma) },
-
-                { "20902705060", (EEnte.Claro, EReferencia.Nico) },
-
-                //{ "00251361487", (EEnte.Arba, EReferencia.Yrigoyen) },
-                
-                { "030006245390", (EEnte.Edesur, EReferencia.Yrigoyen) },
+                { "00100251361487", (EEnte.Arba, EReferencia.Yrigoyen) },
+                { "00251361487", (EEnte.Arba, EReferencia.Yrigoyen) },
+                { "030006245390", (EEnte.Metrogas, EReferencia.Yrigoyen) },
                 { "0004022218", (EEnte.Edesur, EReferencia.Yrigoyen) },
                 { "00904022218", (EEnte.Edesur, EReferencia.Yrigoyen) },
-                { "00251361487", (EEnte.Edesur, EReferencia.Yrigoyen) },
+                { "00904675863", (EEnte.Edesur, EReferencia.Yrigoyen) },
+                { "29830006245390", (EEnte.Metrogas, EReferencia.Yrigoyen) },
+                { "29820144118800", (EEnte.Metrogas, EReferencia.Yrigoyen) },
+                { "20144118800", (EEnte.Metrogas, EReferencia.Yrigoyen) },
                 { "24619974533928", (EEnte.Telefonica, EReferencia.Yrigoyen) },
                 { "4002036838564", (EEnte.Telefonica, EReferencia.Yrigoyen) },
 
@@ -174,20 +172,34 @@ namespace AdminPagosDLL.Core
                 { "00101250019153", (EEnte.Arba, EReferencia.VillaGesell) },
                 { "01250019153", (EEnte.Arba, EReferencia.VillaGesell) },
 
+                { "20199489345", (EEnte.Claro, EReferencia.Norma) },
+                { "08620199489345", (EEnte.Claro, EReferencia.Norma) },
+
+                { "20902705060", (EEnte.Claro, EReferencia.Nico) },
+                { "08620902705060", (EEnte.Claro, EReferencia.Nico) },
                 { "0001280444", (EEnte.Edesur, EReferencia.Nico) },
+                { "00901280444", (EEnte.Edesur, EReferencia.Nico) },
 
                 { "00100250089457", (EEnte.Arba, EReferencia.VelezSarsfield) },
                 { "00250089457", (EEnte.Arba, EReferencia.VelezSarsfield) },
                 { "3860000616796", (EEnte.AySA, EReferencia.VelezSarsfield) },
                 { "0000616796", (EEnte.AySA, EReferencia.VelezSarsfield) },
                 { "0001280445", (EEnte.Edesur, EReferencia.VelezSarsfield) },
+                { "00901280445", (EEnte.Edesur, EReferencia.VelezSarsfield) },
+                { "29820144117001", (EEnte.Metrogas, EReferencia.VelezSarsfield) },
                 { "0000000000402052000", (EEnte.MunicipalidadLanus, EReferencia.VelezSarsfield) },
 
                 { "0003846727", (EEnte.Edesur, EReferencia.TiaRaquel) },
+                { "00903846727", (EEnte.Edesur, EReferencia.TiaRaquel) },
                 { "030003392507", (EEnte.Metrogas, EReferencia.TiaRaquel) },
+                { "0290184409", (EEnte.Movistar, EReferencia.TiaRaquel) },
                 { "0000000000445015012", (EEnte.MunicipalidadLanus, EReferencia.TiaRaquel) },
                 { "1003169065010001", (EEnte.Telefonica, EReferencia.TiaRaquel) },
-                { "0564453739", (EEnte.Telefonica, EReferencia.TiaRaquel) }
+                { "0564453739", (EEnte.Telefonica, EReferencia.TiaRaquel) },
+
+                { "00904777178", (EEnte.Edesur, EReferencia.TiaRenee) },
+
+                { "08620382717056", (EEnte.Claro, EReferencia.Guille) }
             };
 
         private bool TryMapClienteData(string nroCliente, out (EEnte Ente, EReferencia Referencia) clienteData)
@@ -1024,79 +1036,13 @@ namespace AdminPagosDLL.Core
         {
             if (!String.IsNullOrEmpty(pago.NroCliente) && pago.Referencia == EReferencia.Desconocido)
             {
-                switch (pago.NroCliente.Trim())
+                if (ClienteMap.TryGetValue(pago.NroCliente.Trim(), out var clienteData))
                 {
-                    //Pendientes de saber de quien son
-                    case "08620382717056": //Claro
-                        break;
-
-                    //NICO
-                    case "0001280444":
-                    case "00901280444":
-                    case "20902705060": //Claro-Nico
-                    case "08620902705060": //Claro-Nico
-                        pago.Referencia = EReferencia.Nico;
-                        break;
-
-                    //NORMA
-                    case "08620199489345": //Claro-Norma
-                    case "20199489345": //Claro-Norma
-                        pago.Referencia = EReferencia.Norma;
-                        break;
-
-                    //VELEZ
-                    case "00100250089457": //Arba-Velez
-                    case "00250089457": //Arba-Velez
-                    case "3860000616796": //Aysa-Velez
-                    case "0000616796": //Aysa-Velez
-                    case "0001280445": //Edesur-Velez
-                    case "00901280445": //Edesur-Velez
-                    case "29820144117001": //Metrogas-Velez (antes que se saque en el '18)
-                    case "0000000000402052000": //Municimal-Velez
-                        pago.Referencia = EReferencia.VelezSarsfield;
-                        break;
-
-                    //YRIGOYEN
-                    case "00100251361487": //Arba-Yrigoyen
-                    case "00904022218": //Edesur-Yrigoyen
-                    case "0004022218": //Edesur-Yrigoyen
-                    case "00904675863": //Edesur-Yrigoyen
-                    case "030006245390": //Metrogas-Yrigoyen
-                    case "29830006245390": //Metrogas-Yrigoyen
-                    case "29820144118800": //Metrogas-Yrigoyen
-                    case "20144118800": //Metrogas-Yrigoyen
-                    case "0000000000104243024": //Municimal-Yrigoyen
-                        pago.Referencia = EReferencia.Yrigoyen;
-                        break;
-
-                    //TIA RAQUEL
-                    case "00903846727": //Edesur-TiaRaquel
-                    case "0003846727": //Edesur-TiaRaquel
-                    case "030003392507": //Metrogas-TiaRaquel
-                    case "0290184409": //Movistar-TiaRaquel
-                    case "0000000000445015012": //Municimal-TiaRaquel
-                        pago.Referencia = EReferencia.TiaRaquel;
-                        break;
-
-                    //TIA RENEE
-                    case "00904777178": //Edesur
-                        pago.Referencia = EReferencia.TiaRenee;
-                        break;
-
-                    //GESELL
-                    case "0001392230": //AguasBonaerences-Gesell
-                    case "00101250019153": //Arba-Gesell
-                    case "01250019153": //Arba-Gesell
-                    case "0005820": //Cevige-Gesell (Luz)
-                    case "101122140030": //Municipal-Gesell
-                    case "901043090065": //Municipal-Gesell
-                        pago.Referencia = EReferencia.VillaGesell;
-                        break;
-                    default:
-                        break;
+                    pago.Referencia = clienteData.Referencia;
                 }
             }
-            else if (pago.Referencia == EReferencia.Desconocido)
+
+            if (pago.Referencia == EReferencia.Desconocido)
             {
                 if (text.Contains("GESELL"))
                 {
