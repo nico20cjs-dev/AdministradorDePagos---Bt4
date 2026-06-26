@@ -363,5 +363,61 @@ namespace AdminPagosDLL.Controllers
                 return new HttpStatusCodeResult(HttpStatusCode.InternalServerError);
             }
         }
+
+        public async Task<JsonResult> ReprocesarPago(string path)
+        {
+            Mensajes.Limpiar();
+
+            if (String.IsNullOrWhiteSpace(path))
+                return Json(new { success = false, Mensajes }, JsonRequestBehavior.AllowGet);
+
+            var decodedPath = Server.UrlDecode(path)?.Trim();
+            if (String.IsNullOrWhiteSpace(decodedPath) || !decodedPath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) || !System.IO.File.Exists(decodedPath))
+                return Json(new { success = false, Mensajes }, JsonRequestBehavior.AllowGet);
+
+            try
+            {
+                var funcion = new Funciones();
+                await Task.Run(() => funcion.ReprocesarPago(decodedPath));
+
+                if (funcion.Mensajes.Lista.Any())
+                {
+                    Mensajes.Agregar(funcion.Mensajes.Lista);
+                    return Json(new { success = false, Mensajes }, JsonRequestBehavior.AllowGet);
+                }
+
+                var cache = MemoryCache.Default;
+                var pagos = funcion.lstModelos.Cast<Pago>().ToList();
+                var noValPaths = funcion.noVal.OfType<PagoEfectuado>().Select(p => p.Path).ToList();
+
+                cache.Set(PagosCacheKey, pagos, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
+                cache.Set(CantNoAbiertosCacheKey, funcion.CantNoAbiertos, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
+                cache.Set(CantNoIdentificadosCacheKey, funcion.CantNoIdentificados, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
+                cache.Set(CantNoValidosCacheKey, funcion.noVal.Count, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
+                cache.Set(NoAbiertosPathsCacheKey, funcion.NoAbiertosPaths, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
+                cache.Set(NoIdentificadosPathsCacheKey, funcion.NoIdentificadosPaths, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
+                cache.Set(NoValPathsCacheKey, noValPaths, new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable });
+
+                await AplicarInflacionYEnteDisplayAsync(pagos);
+
+                return Json(new
+                {
+                    success = true,
+                    Mensajes,
+                    pagos,
+                    cantNoAbiertos = funcion.CantNoAbiertos,
+                    cantNoIdentificados = funcion.CantNoIdentificados,
+                    cantNoValidos = funcion.noVal.Count,
+                    noAbiertosPaths = funcion.NoAbiertosPaths,
+                    noIdentificadosPaths = funcion.NoIdentificadosPaths,
+                    noValPaths
+                }, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+                Mensajes.Agregar("Error al reprocesar el pago: " + ex.Message);
+                return Json(new { success = false, Mensajes }, JsonRequestBehavior.AllowGet);
+            }
+        }
     }
 }

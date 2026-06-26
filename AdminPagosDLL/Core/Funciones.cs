@@ -480,6 +480,87 @@ namespace AdminPagosDLL.Core
             return Task.CompletedTask;
         }
 
+        public PagoEfectuado ReprocesarPago(string path)
+        {
+            var datos = DeSerializeDatos();
+            if (datos != null)
+            {
+                lstModelos = datos.Pagos;
+                noVal = datos.NoValidos;
+                NoAbiertosPaths = datos.NoAbiertosPaths;
+                NoIdentificadosPaths = datos.NoIdentificadosPaths;
+                CantNoAbiertos = NoAbiertosPaths.Count;
+                CantNoIdentificados = NoIdentificadosPaths.Count;
+            }
+
+            lstModelos.RemoveAll(p => String.Equals(p.Path, path, StringComparison.OrdinalIgnoreCase));
+            noVal.RemoveAll(p => String.Equals(p.Path, path, StringComparison.OrdinalIgnoreCase));
+            NoAbiertosPaths.RemoveAll(p => String.Equals(p, path, StringComparison.OrdinalIgnoreCase));
+            NoIdentificadosPaths.RemoveAll(p => String.Equals(p, path, StringComparison.OrdinalIgnoreCase));
+            CantNoAbiertos = NoAbiertosPaths.Count;
+            CantNoIdentificados = NoIdentificadosPaths.Count;
+
+            if (!File.Exists(path))
+            {
+                Mensajes.Agregar($"El archivo {path} no existe.");
+                SerializarDatos();
+                return null;
+            }
+
+            string nombreArchivo = System.IO.Path.GetFileName(path);
+            var format = new Formatos();
+            PagoEfectuado pago = null;
+
+            try
+            {
+                PdfReader reader;
+                try
+                {
+                    reader = new PdfReader(path);
+                }
+                catch (Exception ex)
+                {
+                    CantNoAbiertos++;
+                    NoAbiertosPaths.Add(path);
+                    Logger.Add($"No se pudo abrir el PDF {path}: {ex.Message}");
+                    SerializarDatos();
+                    return null;
+                }
+
+                using (reader)
+                {
+                    string text = string.Empty;
+                    var (pageRead, pageEnd, ifExpensasHY) = ObtenerRangoPaginas(reader, nombreArchivo, path);
+
+                    for (; pageRead < pageEnd; pageRead++)
+                    {
+                        text += PdfTextExtractor.GetTextFromPage(reader, pageRead);
+
+                        if (!EsComprobantePago(text, nombreArchivo))
+                        {
+                            CantNoIdentificados++;
+                            NoIdentificadosPaths.Add(path);
+                            SerializarDatos();
+                            return null;
+                        }
+
+                        pago = ProcesarTextoComprobante(text, path, nombreArchivo, reader, format, ifExpensasHY);
+                        AgregarPago(pago);
+                    }
+                }
+
+                _fileTimestamps[path] = File.GetLastWriteTimeUtc(path);
+            }
+            catch (Exception ex)
+            {
+                Logger.Add($"Error reprocesando {path}: {ex.Message}");
+                Mensajes.Agregar($"Error reprocesando {path}: {ex.Message}");
+            }
+
+            SerializarDatos();
+            return pago;
+        }
+
         #region Métodos privados de soporte
 
         /// <summary>
@@ -1117,8 +1198,9 @@ namespace AdminPagosDLL.Core
                     pago.Referencia = EReferencia.Norma;
                 }
                 else if (pago.Path.ToLower().Contains("conce"))
-                { 
+                {
                     //TODO: si entra acá hacer alto
+                    //Codigo usuario: "3860000075504"
                 }
 
                 else

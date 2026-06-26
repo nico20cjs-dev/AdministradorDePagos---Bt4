@@ -1805,3 +1805,32 @@ No se pudo abrir el PDF D:\Norma\000   PAGOS\X X X X X X X X X\z - pagos........
 No se pudo abrir el PDF D:\Norma\000   PAGOS\X X X X X X X X X\z - pagos........varios\MAS PAGOS\20725836000463623 (2).pdf: Bad user password
 No se pudo abrir el PDF D:\Norma\000   PAGOS\X X X X X X X X X\z - pagos........varios\MAS PAGOS\20725836000463623.pdf: Bad user password
 No se pudo abrir el PDF D:\Norma\000   PAGOS\X X X X X X X X X\z - pagos........varios\Resumen de cuenta\Resumen_de_Cuenta (13).pdf: Rebuild failed: trailer not found.; Original message: PDF startxref not found.
+
+ Directorio a leer: D:\Norma\000   PAGOS\
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2020-07-EXP.'
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2020-08--exp.JULIO'
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2020-10-exp'
+[Formatos.CrearFecha] No se pudo parsear la fecha: '2021-02-xx'
+No se pudo abrir el PDF D:\Norma\000   PAGOS\X X X X X X X X X\z - pagos........varios\00_pagos\1889210000463623.pdf: Bad user password
+No se pudo abrir el PDF D:\Norma\000   PAGOS\X X X X X X X X X\z - pagos........varios\00_pagos\20725836000463623 (1).pdf: Bad user password
+No se pudo abrir el PDF D:\Norma\000   PAGOS\X X X X X X X X X\z - pagos........varios\00_pagos\20725836000463623 (2).pdf: Bad user password
+No se pudo abrir el PDF D:\Norma\000   PAGOS\X X X X X X X X X\z - pagos........varios\00_pagos\20725836000463623.pdf: Bad user password
+No se pudo abrir el PDF D:\Norma\000   PAGOS\X X X X X X X X X\z - pagos........varios\00_pagos\59504107000463623 (1).pdf: Bad user password
+No se pudo abrir el PDF D:\Norma\000   PAGOS\X X X X X X X X X\z - pagos........varios\00_pagos\59504107000463623 (2).pdf: Bad user password
+No se pudo abrir el PDF D:\Norma\000   PAGOS\X X X X X X X X X\z - pagos........varios\00_pagos\59504107000463623 (3).pdf: Bad user password
+No se pudo abrir el PDF D:\Norma\000   PAGOS\X X X X X X X X X\z - pagos........varios\00_pagos\59504107000463623 (4).pdf: Bad user password
+No se pudo abrir el PDF D:\Norma\000   PAGOS\X X X X X X X X X\z - pagos........varios\00_pagos\59504107000463623.pdf: Bad user password
+No se pudo abrir el PDF D:\Norma\000   PAGOS\X X X X X X X X X\z - pagos........varios\00_pagos\Resumen_CABAL_Credicoop_02-2020.pdf: Bad user password
+No se pudo abrir el PDF D:\Norma\000   PAGOS\X X X X X X X X X\z - pagos........varios\MAS PAGOS\106798362 (1).pdf: Bad user password
+No se pudo abrir el PDF D:\Norma\000   PAGOS\X X X X X X X X X\z - pagos........varios\MAS PAGOS\106798362 (2).pdf: Bad user password
+No se pudo abrir el PDF D:\Norma\000   PAGOS\X X X X X X X X X\z - pagos........varios\MAS PAGOS\106798362.pdf: Bad user password
+No se pudo abrir el PDF D:\Norma\000   PAGOS\X X X X X X X X X\z - pagos........varios\MAS PAGOS\1889210000463623.pdf: Bad user password
+No se pudo abrir el PDF D:\Norma\000   PAGOS\X X X X X X X X X\z - pagos........varios\MAS PAGOS\207258360 (1).pdf: Bad user password
+No se pudo abrir el PDF D:\Norma\000   PAGOS\X X X X X X X X X\z - pagos........varios\MAS PAGOS\207258360 (2).pdf: Bad user password
+No se pudo abrir el PDF D:\Norma\000   PAGOS\X X X X X X X X X\z - pagos........varios\MAS PAGOS\207258360 (3).pdf: Bad user password
+No se pudo abrir el PDF D:\Norma\000   PAGOS\X X X X X X X X X\z - pagos........varios\MAS PAGOS\207258360 (4).pdf: Bad user password
+No se pudo abrir el PDF D:\Norma\000   PAGOS\X X X X X X X X X\z - pagos........varios\MAS PAGOS\207258360.pdf: Bad user password
+No se pudo abrir el PDF D:\Norma\000   PAGOS\X X X X X X X X X\z - pagos........varios\MAS PAGOS\20725836000463623 (1).pdf: Bad user password
+No se pudo abrir el PDF D:\Norma\000   PAGOS\X X X X X X X X X\z - pagos........varios\MAS PAGOS\20725836000463623 (2).pdf: Bad user password
+No se pudo abrir el PDF D:\Norma\000   PAGOS\X X X X X X X X X\z - pagos........varios\MAS PAGOS\20725836000463623.pdf: Bad user password
+No se pudo abrir el PDF D:\Norma\000   PAGOS\X X X X X X X X X\z - pagos........varios\Resumen de cuenta\Resumen_de_Cuenta (13).pdf: Rebuild failed: trailer not found.; Original message: PDF startxref not found.

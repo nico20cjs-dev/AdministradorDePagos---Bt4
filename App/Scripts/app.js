@@ -292,6 +292,33 @@ function renderDetalleTable(groupBy) {
     $('#detalleTableWrap').html(html);
 }
 
+function mapPagosToData(pagos) {
+    return pagos.map(function (pago) {
+        var importeUsd = Number(pago.ImporteDolar) || 0;
+        var safePath = escapeHtmlAttr(pago.Path);
+        return [
+            pago.NroTransaccion,
+            pago.EnteDisplayText || 'Desconocido',
+            pago.NroCliente,
+            pago.NroCtaDebito,
+            parseMvcDate(pago.FechaVencimiento),
+            pago.Cuota,
+            '<button type="button" class="pdf-link" data-path="' + safePath + '" title="Abrir PDF en nueva pesta\u00f1a">Abrir</button>',
+            pago.TipoComprobante,
+            parseMvcDate(pago.FechaPago),
+            Number(pago.Importe) || 0,
+            importeUsd,
+            Number(pago.ImporteDolarActualizado) || 0,
+            getStringReference(pago.Referencia),
+            '<button type="button" class="btn-reprocesar" data-path="' + safePath + '" title="Reprocesar este comprobante" aria-label="Reprocesar pago">' +
+                '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">' +
+                    '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>' +
+                '</svg>' +
+            '</button>'
+        ];
+    });
+}
+
 function leerPdf(action) {
     var endpoint = action || 'LeerPDF';
     setLoading(true);
@@ -308,25 +335,7 @@ function leerPdf(action) {
                 return;
             }
 
-                var data = respuesta.pagos.map(function (pago) {
-                var importeUsd = Number(pago.ImporteDolar) || 0;
-                var safePath = escapeHtmlAttr(pago.Path);
-                return [
-                    pago.NroTransaccion,
-                    pago.EnteDisplayText || 'Desconocido',
-                    pago.NroCliente,
-                    pago.NroCtaDebito,
-                    parseMvcDate(pago.FechaVencimiento),
-                    pago.Cuota,
-                    '<button type="button" class="pdf-link" data-path="' + safePath + '" title="Abrir PDF en nueva pesta\u00f1a">Abrir</button>',
-                    pago.TipoComprobante,
-                    parseMvcDate(pago.FechaPago),
-                    Number(pago.Importe) || 0,
-                    importeUsd,
-                    Number(pago.ImporteDolarActualizado) || 0,
-                    getStringReference(pago.Referencia)
-                ];
-            });
+                var data = mapPagosToData(respuesta.pagos);
 
             table.rows.add(data).draw();
 
@@ -363,6 +372,49 @@ function leerPdf(action) {
 function callBackLeerPdf() {
     table.columns.adjust().draw(false);
     totalizarPagos();
+}
+
+function reprocesarPago(path, buttonEl) {
+    var $btn = $(buttonEl);
+    $btn.prop('disabled', true);
+    limpiarMensajes();
+
+    $.ajax({
+        url: '/Home/ReprocesarPago',
+        data: { path: path },
+        success: function (respuesta) {
+            if (respuesta.success) {
+                table.clear();
+
+                var data = mapPagosToData(respuesta.pagos);
+                table.rows.add(data).draw();
+
+                callBackLeerPdf();
+
+                if (typeof respuesta.cantNoAbiertos !== 'undefined') {
+                    var total = (respuesta.cantNoAbiertos || 0) + (respuesta.cantNoIdentificados || 0) + (respuesta.cantNoValidos || 0);
+                    var el = $('#noProcesados');
+                    el.text(total);
+                    el.attr('title', 'No se pudieron abrir: ' + (respuesta.cantNoAbiertos || 0)
+                        + ' | No se pudieron identificar: ' + (respuesta.cantNoIdentificados || 0)
+                        + ' | Datos incompletos: ' + (respuesta.cantNoValidos || 0));
+                    window._fallosData = {
+                        noAbiertosPaths: respuesta.noAbiertosPaths || [],
+                        noIdentificadosPaths: respuesta.noIdentificadosPaths || [],
+                        noValPaths: respuesta.noValPaths || []
+                    };
+                }
+            } else if (respuesta.Mensajes && respuesta.Mensajes.Lista.length > 0) {
+                procesarMensajes(respuesta.Mensajes.Lista);
+            }
+        },
+        error: function (err) {
+            procesarMensajes([{ Tipo: 0, Texto: 'Error al reprocesar el pago. Estado: ' + err.status }]);
+        },
+        complete: function () {
+            $btn.prop('disabled', false);
+        }
+    });
 }
 
 function applyAdvancedFilters() {
@@ -587,13 +639,23 @@ $(document).ready(function () {
         }
     });
 
-    $('#dataTable tfoot th').each(function () {
+    $('#dataTable tbody').on('click', '.btn-reprocesar', function (e) {
+        e.stopPropagation();
+        var ruta = $(this).data('path');
+        if (ruta) {
+            reprocesarPago(ruta, this);
+        }
+    });
+
+    $('#dataTable tfoot th').each(function (index) {
+        if (index === 13) return;
         var title = $(this).text();
         $(this).html('<input type="text" placeholder="Buscar ' + title + '" />');
     });
 
     table = $('#dataTable').DataTable({
         stateSave: true,
+        order: [[4, 'desc']],
             stateLoadParams: function (settings, data) {
                 if (data && data.time) {
                     if (data.advancedFilters) {
@@ -621,7 +683,9 @@ $(document).ready(function () {
             data.filtersCollapsed = $('#filtersPanel').hasClass('is-collapsed');
         },
         aoColumnDefs: [
-            { bSortable: false, aTargets: [6] },
+            { bSortable: false, aTargets: [6, 13] },
+            { bSearchable: false, aTargets: [13] },
+            { sWidth: '60px', aTargets: [13] },
             { sWidth: '120px', aTargets: [4, 8, 9, 10, 11] },
             { targets: [9, 10, 11], className: 'dt-right', render: function (data, type) {
                 if (type === 'display') {
