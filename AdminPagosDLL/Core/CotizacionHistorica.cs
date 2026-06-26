@@ -10,7 +10,7 @@ namespace AdminPagosDLL.Core
         static ConcurrentDictionary<string, double> CacheBD = new ConcurrentDictionary<string, double>();
 
         public static void CargarCotizacion(string jsonHistorico)
-        {            
+        {
             dynamic jo = Newtonsoft.Json.Linq.JObject.Parse(jsonHistorico);
             var items = jo.data;
 
@@ -32,7 +32,7 @@ namespace AdminPagosDLL.Core
         }
 
         public static double GetCotizacionPorFecha(string fecha)
-        { 
+        {
             return CacheBD.TryGetValue(fecha, out double cotizacion) ? cotizacion : 0;
         }
 

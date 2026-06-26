@@ -9,6 +9,6 @@ namespace AdminPagosDLL.Models
     {
         public string Texto { get; set; }
         public ETipoMensaje Tipo { get; set; }
-        
+
     }
 }

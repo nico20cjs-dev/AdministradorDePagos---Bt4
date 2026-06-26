@@ -8,7 +8,7 @@ namespace AdminPagosDLL.Core
 {
     public class Formatos
     {
-		public FMensaje Mensajes = new FMensaje();
+        public FMensaje Mensajes = new FMensaje();
 
         // ─────────────────────────────────────────────────────────────────
         //  Formatos soportados — en orden de probabilidad descendente

@@ -1,5 +1,5 @@
 ﻿public enum ETipoComprobante
-{ 
+{
     Completo,
     Reducido
 }
@@ -13,7 +13,7 @@ public enum ETipoMensaje
 }
 
 public enum EReferencia
-{ 
+{
     Desconocido,
     Yrigoyen,
     Nico,
