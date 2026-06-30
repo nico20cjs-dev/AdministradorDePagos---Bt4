@@ -129,9 +129,9 @@ function setFontSize(size) {
     var isLarge = size === 'large';
     $('#fontToggle').attr('aria-pressed', isLarge ? 'true' : 'false')
         .attr('title', 'Cambiar tamaño de texto')
-        .html(
-            '<svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><polyline points="4 7 4 4 20 4 20 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="9" y1="20" x2="15" y2="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="4" x2="12" y2="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>' +
-            '<span>' + (isLarge ? 'Texto grande' : 'Texto normal') + '</span>'
+        .html(isLarge
+            ? '<svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M3.5 18L8 7l4.5 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="6" y1="14" x2="10" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="8" x2="18" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span>Reducir texto</span>'
+            : '<svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M3.5 18L8 7l4.5 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="6" y1="14" x2="10" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="15" y1="5" x2="15" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="12" y1="8" x2="18" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span>Aumentar texto</span>'
         );
 }
 
@@ -724,8 +724,9 @@ $(document).ready(function () {
                 $('input', this.footer()).on('keyup change clear', function () {
                     clearTimeout(debounceTimer);
                     debounceTimer = setTimeout(function () {
-                        if (that.search() !== this.value) {
-                            that.search(this.value).draw();
+                        var val = this.value.trim();
+                        if (that.search() !== val) {
+                            that.search(val).draw();
                             totalizarPagos();
                         }
                     }.bind(this), 300);
