@@ -676,14 +676,31 @@ namespace AdminPagosDLL.Core
                 || (path.Contains("SAN RAFAEL") && nombreArchivo.ToLower().Contains("exp"))
                 )
             {
+                // es Expensas HY
                 if (!nombreArchivo.ToLower().Contains("movistar"))
                 {
+                    
                     ifExpensasHY = true;
 
                     if (reader.NumberOfPages == 1)
                     {
                         pageRead = 1;
                         pageEnd = 2;
+                    }
+                    else if (reader.NumberOfPages == 2)
+                    {
+                        //Puede ser una factura de Telecentro
+                        pageRead = 1;
+                        pageEnd = 2;
+
+                        // Extraemos el texto de la página actual de forma ultra rápida
+                        string textoPagina = PdfTextExtractor.GetTextFromPage(reader, pageRead);
+
+                        if (textoPagina.Contains("Telecentro"))
+                        {
+                            // Es una factura o comprobante de tipo "Telecentro", no es "ExpensasHY"
+                            ifExpensasHY = false;
+                        }
                     }
                     else if (reader.NumberOfPages == 4)
                     {
@@ -927,6 +944,7 @@ namespace AdminPagosDLL.Core
 
                     switch (clave.Trim())
                     {
+                        case "Fecha":
                         case "Fecha de Transacción":
                         case "Fecha de Pago":
                             if (!String.IsNullOrEmpty(valor))
@@ -934,6 +952,7 @@ namespace AdminPagosDLL.Core
                                 pago.FechaPago = format.CrearFecha(valor);
                             }
                             break;
+
                         case "Código de seguridad":
                         case "Código de Seguridad":
                         case "Cod. Pago":
@@ -952,6 +971,7 @@ namespace AdminPagosDLL.Core
 
                         case "Código/Usuario":
                         case "Codigo/Usuario":
+                        case "Nº DE CLIENTE":
                         case "Nro de Cliente":
                         case "NRO. DE CLIENTE":
 
@@ -973,6 +993,7 @@ namespace AdminPagosDLL.Core
                         case "Cuenta a debitar":
                             pago.NroCtaDebito = valor;
                             break;
+
                         case "Importe":
                         case "IMPORTE":
 
@@ -991,6 +1012,7 @@ namespace AdminPagosDLL.Core
 
 
                             break;
+
                         case "Fecha de Vencimiento":
                         case "VTO":
                             pago.FechaVencimiento = format.CrearFecha(valor);
@@ -1199,7 +1221,7 @@ namespace AdminPagosDLL.Core
                 {
                     pago.Referencia = EReferencia.TiaRaquel;
                 }
-                else if (text.Contains("2398966") ||
+                else if (text.Contains("2398966") || //Nro cliente de Telecentro Norma
                     text.Contains("30006245390") ||
                     text.Contains("20382717056") ||
                     text.Contains("ADM San Rafael"))

@@ -310,9 +310,10 @@ function mapPagosToData(pagos) {
             importeUsd,
             Number(pago.ImporteDolarActualizado) || 0,
             getStringReference(pago.Referencia),
-            '<button type="button" class="btn-reprocesar" data-path="' + safePath + '" title="Reprocesar este comprobante" aria-label="Reprocesar pago">' +
+            '<button type="button" class="btn-reprocesar" data-path="' + safePath + '" title="Volver a leer el PDF y actualizar los datos" aria-label="Reprocesar pago">' +
                 '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">' +
-                    '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>' +
+                    '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/>' +
+                    '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>' +
                 '</svg>' +
             '</button>'
         ];
@@ -376,7 +377,14 @@ function callBackLeerPdf() {
 
 function reprocesarPago(path, buttonEl) {
     var $btn = $(buttonEl);
-    $btn.prop('disabled', true);
+    var origHtml = $btn.html();
+    var origTitle = $btn.attr('title');
+    var origAriaLabel = $btn.attr('aria-label');
+    $btn.prop('disabled', true)
+        .addClass('is-processing')
+        .attr('title', 'Reprocesando...')
+        .attr('aria-label', 'Reprocesando pago')
+        .html('<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" class="spin-svg"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.5" stroke-dasharray="14 42" stroke-linecap="round"/></svg>');
     limpiarMensajes();
 
     var currentPage = table.page.info().page;
@@ -416,7 +424,11 @@ function reprocesarPago(path, buttonEl) {
             procesarMensajes([{ Tipo: 0, Texto: 'Error al reprocesar el pago. Estado: ' + err.status }]);
         },
         complete: function () {
-            $btn.prop('disabled', false);
+            $btn.prop('disabled', false)
+                .removeClass('is-processing')
+                .attr('title', origTitle)
+                .attr('aria-label', origAriaLabel)
+                .html(origHtml);
         }
     });
 }
