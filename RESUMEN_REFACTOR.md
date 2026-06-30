@@ -72,7 +72,7 @@ ObtenerLimiteArchivos(int cantidadTotal)
 CargarEstadoPrevio(out bool hasCache)
 ObtenerRangoPaginas(PdfReader reader, string nombreArchivo, string path)
 EsComprobantePago(string texto, string nombreArchivo)
-ProcesarTextoComprobante(string text, string path, string nombreArchivo, PdfReader reader, Formatos format, bool ifExpensasHY)
+ProcesarTextoComprobante(string text, string path, string nombreArchivo, PdfReader reader, Formatos format, ETipoDocumento tipoDoc)
 ResolverReferencia(PagoEfectuado pago, string text, string nombreArchivo)
 ResolverEnteFallback(PagoEfectuado pago, string text, string path, string nombreArchivo, PdfReader reader, Formatos format)
 AplicarValidacionesFinales(PagoEfectuado pago, int cantLineas)
@@ -122,7 +122,7 @@ private PagoEfectuado ProcesarTextoComprobante(...)
     using (StringReader readerTxt = new StringReader(text))
     {
         var _pago = new PagoEfectuado { Path = path };
-        bool newFormatPdf = DetectarNuevoFormato(reader, text);
+        ETipoDocumento tipoDoc = DetectarTipoDocumento(reader, text, nombreArchivo);
         int cantLineas = 0;
 
         while ((line = readerTxt.ReadLine()) != null)
@@ -193,14 +193,14 @@ Los métodos extraídos en Fase 1 (`ResolverReferencia`, `ResolverEnteFallback`,
 
 | Algoritmo | Cuándo se usa | Lógica |
 |---|---|---|
-| **Expensas HY** | `ifExpensasHY = true` (PDFs San Rafael) | Escanea líneas buscando `"016"`, extrae datos de columnas |
+| **Expensas HY** | `tipoDoc == ETipoDocumento.ExpensasAdmSanRafael` (PDFs San Rafael) | Escanea líneas buscando `"016"`, extrae datos de columnas |
 | **Genérico** | Todo lo demás | Línea por línea, split por `:`, switch `clave → valor` |
 
 **Cambios realizados:**
 
-- **`ParsearExpensasHY(PagoEfectuado, string, string, Formatos)`** (~30 líneas): método privado nuevo que encapsula el bloque `if (ifExpensasHY) { ... }`.
-- **`ParsearLineasEstandar(PagoEfectuado, string, Formatos, bool)`** (~170 líneas): método privado nuevo que encapsula el `while` + switch de parsing genérico. Retorna `cantLineas`.
-- **`ProcesarTextoComprobante`**: pasó de ~230 líneas a **~30 líneas**. Ahora es un orquestador limpio que detecta `newFormatPdf`, delega a `ParsearExpensasHY` o `ParsearLineasEstandar`, y luego aplica `ResolverReferencia` + `ResolverEnteFallback` + `AplicarValidacionesFinales`.
+- **`ParsearExpensasHY(PagoEfectuado, string, string, Formatos)`** (~30 líneas): método privado nuevo que encapsula el bloque `if (tipoDoc == ETipoDocumento.ExpensasAdmSanRafael) { ... }`.
+- **`ParsearLineasEstandar(PagoEfectuado, string, Formatos, ETipoDocumento)`** (~170 líneas): método privado nuevo que encapsula el `while` + switch de parsing genérico. Retorna `cantLineas`.
+- **`ProcesarTextoComprobante`**: pasó de ~230 líneas a **~30 líneas**. Ahora es un orquestador limpio que detecta `ETipoDocumento` desde el texto (MercadoPago, Banco Provincia moderno), delega a `ParsearExpensasHY` o `ParsearLineasEstandar`, y luego aplica `ResolverReferencia` + `ResolverEnteFallback` + `AplicarValidacionesFinales`.
 
 **Resultado:**
 

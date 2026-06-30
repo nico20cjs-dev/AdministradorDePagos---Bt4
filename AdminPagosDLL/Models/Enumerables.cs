@@ -1,4 +1,13 @@
-﻿public enum ETipoComprobante
+﻿public enum ETipoDocumento
+{
+    Desconocido = 0,
+    ExpensasAdmSanRafael = 1,
+    FacturaTelecentro = 2,
+    MercadoPago = 3,
+    ComprobanteBcoPciaModerno = 4,
+}
+
+public enum ETipoComprobante
 {
     Completo,
     Reducido

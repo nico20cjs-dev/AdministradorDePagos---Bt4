@@ -244,45 +244,45 @@ namespace AdminPagosDLL.Tests
             var fmt = new Formatos();
 
             var p1 = new PagoEfectuado();
-            f.ParsearLineasEstandar(p1, "Fecha de Pago: 15/06/2023", fmt, false);
+            f.ParsearLineasEstandar(p1, "Fecha de Pago: 15/06/2023", fmt, ETipoDocumento.Desconocido);
             AssertEqual(new DateTime(2023, 6, 15), p1.FechaPago, "ParsearEstandar: fecha pago");
 
             var p2 = new PagoEfectuado();
-            f.ParsearLineasEstandar(p2, "Fecha de Transacción: 20/01/2024", fmt, false);
+            f.ParsearLineasEstandar(p2, "Fecha de Transacción: 20/01/2024", fmt, ETipoDocumento.Desconocido);
             AssertEqual(new DateTime(2024, 1, 20), p2.FechaPago, "ParsearEstandar: fecha transaccion");
 
             var p3 = new PagoEfectuado();
-            f.ParsearLineasEstandar(p3, "Cod. Pago: 12345", fmt, false);
+            f.ParsearLineasEstandar(p3, "Cod. Pago: 12345", fmt, ETipoDocumento.Desconocido);
             AssertEqual("12345", p3.NroTransaccion, "ParsearEstandar: cod pago");
 
             var p4 = new PagoEfectuado();
-            f.ParsearLineasEstandar(p4, "Nro de Cliente: 20199489345", fmt, false);
+            f.ParsearLineasEstandar(p4, "Nro de Cliente: 20199489345", fmt, ETipoDocumento.Desconocido);
             AssertEqual("20199489345", p4.NroCliente, "ParsearEstandar: nro cliente");
             AssertEqual(EEnte.Claro, p4.Ente, "ParsearEstandar: ente desde ClienteMap");
             AssertEqual(EReferencia.Norma, p4.Referencia, "ParsearEstandar: ref desde ClienteMap");
 
             var p5 = new PagoEfectuado();
-            f.ParsearLineasEstandar(p5, "Importe: $ 15000,00", fmt, false);
+            f.ParsearLineasEstandar(p5, "Importe: $ 15000,00", fmt, ETipoDocumento.Desconocido);
             AssertEqual(15000.00m, p5.Importe, "ParsearEstandar: importe");
 
             var p6 = new PagoEfectuado();
-            f.ParsearLineasEstandar(p6, "Fecha de Vencimiento: 30/06/2024", fmt, false);
+            f.ParsearLineasEstandar(p6, "Fecha de Vencimiento: 30/06/2024", fmt, ETipoDocumento.Desconocido);
             AssertEqual(new DateTime(2024, 6, 30), p6.FechaVencimiento, "ParsearEstandar: fecha vto");
 
             var p7 = new PagoEfectuado();
-            f.ParsearLineasEstandar(p7, "Cuota: 006/17", fmt, false);
+            f.ParsearLineasEstandar(p7, "Cuota: 006/17", fmt, ETipoDocumento.Desconocido);
             AssertEqual("006/17", p7.Cuota, "ParsearEstandar: cuota");
 
             var p8 = new PagoEfectuado();
             var multi = "Fecha de Pago: 15/06/2023\nNro de Cliente: 20199489345\nImporte: $ 5000,00\nCódigo de seguridad: 12345";
-            f.ParsearLineasEstandar(p8, multi, fmt, false);
+            f.ParsearLineasEstandar(p8, multi, fmt, ETipoDocumento.Desconocido);
             AssertEqual(new DateTime(2023, 6, 15), p8.FechaPago, "ParsearEstandar multi: fecha");
             AssertEqual("20199489345", p8.NroCliente, "ParsearEstandar multi: nro cliente");
             AssertEqual(5000.00m, p8.Importe, "ParsearEstandar multi: importe");
             AssertEqual("12345", p8.NroTransaccion, "ParsearEstandar multi: transaccion");
 
             var p9 = new PagoEfectuado();
-            var lineas = f.ParsearLineasEstandar(p9, "a\nb\nc\nd\ne", fmt, false);
+            var lineas = f.ParsearLineasEstandar(p9, "a\nb\nc\nd\ne", fmt, ETipoDocumento.Desconocido);
             AssertEqual(5, lineas, "ParsearEstandar: retorna 5 lineas");
             Console.WriteLine();
         }

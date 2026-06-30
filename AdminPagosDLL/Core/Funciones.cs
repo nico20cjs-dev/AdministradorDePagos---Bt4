@@ -91,7 +91,8 @@ namespace AdminPagosDLL.Core
             {
                 return EEnte.Metrogas;
             }
-            else if (cleanText == "cablevision".ToLower())
+            else if (cleanText == "cablevision" ||
+                cleanText == "cablevisión")
             {
                 return EEnte.Cablevision;
             }
@@ -184,6 +185,7 @@ namespace AdminPagosDLL.Core
 
                 { "20199489345", (EEnte.Claro, EReferencia.Norma) },
                 { "08620199489345", (EEnte.Claro, EReferencia.Norma) },
+                { "0250751833", (EEnte.Telefonica, EReferencia.Norma) },
 
                 { "20902705060", (EEnte.Claro, EReferencia.Nico) },
                 { "08620902705060", (EEnte.Claro, EReferencia.Nico) },
@@ -321,7 +323,7 @@ namespace AdminPagosDLL.Core
                         using (reader)
                         {
                             string text = string.Empty;
-                            var (pageRead, pageEnd, ifExpensasHY) = ObtenerRangoPaginas(reader, nombreArchivo, path);
+                            var (pageRead, pageEnd, tipoDoc) = ObtenerRangoPaginas(reader, nombreArchivo, path);
 
                             for (; pageRead < pageEnd; pageRead++)
                             {
@@ -334,7 +336,7 @@ namespace AdminPagosDLL.Core
                                     continue;
                                 }
 
-                                var pago = ProcesarTextoComprobante(text, path, nombreArchivo, reader, format, ifExpensasHY);
+                                var pago = ProcesarTextoComprobante(text, path, nombreArchivo, reader, format, tipoDoc);
                                 AgregarPago(pago);
                             }
                         }
@@ -540,7 +542,7 @@ namespace AdminPagosDLL.Core
                 using (reader)
                 {
                     string text = string.Empty;
-                    var (pageRead, pageEnd, ifExpensasHY) = ObtenerRangoPaginas(reader, nombreArchivo, path);
+                    var (pageRead, pageEnd, tipoDoc) = ObtenerRangoPaginas(reader, nombreArchivo, path);
 
                     for (; pageRead < pageEnd; pageRead++)
                     {
@@ -554,7 +556,7 @@ namespace AdminPagosDLL.Core
                             return null;
                         }
 
-                        pago = ProcesarTextoComprobante(text, path, nombreArchivo, reader, format, ifExpensasHY);
+                        pago = ProcesarTextoComprobante(text, path, nombreArchivo, reader, format, tipoDoc);
                         AgregarPago(pago);
                     }
                 }
@@ -657,11 +659,11 @@ namespace AdminPagosDLL.Core
         /// <summary>
         /// Determina el rango de páginas a leer según el tipo de archivo y cantidad de páginas.
         /// </summary>
-        private (int inicio, int fin, bool esExpensasHY) ObtenerRangoPaginas(PdfReader reader, string nombreArchivo, string path)
+        private (int inicio, int fin, ETipoDocumento tipoDoc) ObtenerRangoPaginas(PdfReader reader, string nombreArchivo, string path)
         {
             int pageRead = 1;
             int pageEnd = 2;
-            bool ifExpensasHY = false;
+            ETipoDocumento tipoDoc = ETipoDocumento.Desconocido;
 
             if (nombreArchivo.ToLower().Contains("flow"))
             {
@@ -680,27 +682,12 @@ namespace AdminPagosDLL.Core
                 if (!nombreArchivo.ToLower().Contains("movistar"))
                 {
                     
-                    ifExpensasHY = true;
+                    tipoDoc = ETipoDocumento.ExpensasAdmSanRafael;
 
                     if (reader.NumberOfPages == 1)
                     {
                         pageRead = 1;
                         pageEnd = 2;
-                    }
-                    else if (reader.NumberOfPages == 2)
-                    {
-                        //Puede ser una factura de Telecentro
-                        pageRead = 1;
-                        pageEnd = 2;
-
-                        // Extraemos el texto de la página actual de forma ultra rápida
-                        string textoPagina = PdfTextExtractor.GetTextFromPage(reader, pageRead);
-
-                        if (textoPagina.Contains("Telecentro"))
-                        {
-                            // Es una factura o comprobante de tipo "Telecentro", no es "ExpensasHY"
-                            ifExpensasHY = false;
-                        }
                     }
                     else if (reader.NumberOfPages == 4)
                     {
@@ -745,7 +732,21 @@ namespace AdminPagosDLL.Core
                 pageEnd = 5;
             }
 
-            return (pageRead, pageEnd, ifExpensasHY);
+            if (reader.NumberOfPages == 2)
+            {
+                //Puede ser una factura de Telecentro
+                
+                // Extraemos el texto de la página actual de forma ultra rápida
+                string textoPagina = PdfTextExtractor.GetTextFromPage(reader, pageRead);
+
+                if (textoPagina.Contains("Telecentro"))
+                {
+                    // Es una factura o comprobante de tipo "Telecentro", no es "ExpensasHY"
+                    tipoDoc = ETipoDocumento.FacturaTelecentro;
+                }
+            }
+
+            return (pageRead, pageEnd, tipoDoc);
         }
 
         /// <summary>
@@ -847,36 +848,50 @@ namespace AdminPagosDLL.Core
         /// <summary>
         /// Procesa el texto extraido de un comprobante y devuelve un PagoEfectuado.
         /// </summary>
-        private PagoEfectuado ProcesarTextoComprobante(string text, string path, string nombreArchivo, PdfReader reader, Formatos format, bool ifExpensasHY)
+        private PagoEfectuado ProcesarTextoComprobante(string text, string path, string nombreArchivo, PdfReader reader, Formatos format, ETipoDocumento tipoDoc)
         {
             var pago = new PagoEfectuado();
             pago.Path = path;
 
-            bool newFormatPdf = false;
+            if (tipoDoc == ETipoDocumento.Desconocido)
+            {
+                if (text.Contains("Operación realizada con éxito"))
+                {
+                    tipoDoc = ETipoDocumento.ComprobanteBcoPciaModerno;
+                }
+
+                else if (text.Contains("Comprobante de pago") && text.Contains("Pagaste a") &&
+                text.Contains("Total pagado") && text.Contains("Detalle de operación"))
+                {
+                    tipoDoc = ETipoDocumento.MercadoPago;
+                }
+            }
+
+            int cantLineas = 0;
+
+            switch (tipoDoc)
+            {
+                case ETipoDocumento.ExpensasAdmSanRafael:
+                    ParsearExpensasHY(pago, text, nombreArchivo, format);
+                    break;
+                case ETipoDocumento.FacturaTelecentro:
+                    ParsearTelecentro(pago, text, nombreArchivo, format);
+                    break;
+                default:
+                    cantLineas = ParsearLineasEstandar(pago, text, format, tipoDoc);
+                    break;
+            }
+            
+            ResolverReferencia(pago, text, nombreArchivo);
+            ResolverEnteFallback(pago, text, path, nombreArchivo, reader, format);
+            AplicarValidacionesFinales(pago, cantLineas);
+
+            //Validacion por si no se pudo leer las fechas del archivo
             string textoOriginal = null;
             if (!reader.Info.TryGetValue("CreationDate", out textoOriginal))
             {
                 reader.Info.TryGetValue("ModDate", out textoOriginal);
             }
-            if (text.Contains("Operación realizada con éxito"))
-            {
-                newFormatPdf = true;
-            }
-
-            int cantLineas = 0;
-
-            if (ifExpensasHY)
-            {
-                ParsearExpensasHY(pago, text, nombreArchivo, format);
-            }
-            else
-            {
-                cantLineas = ParsearLineasEstandar(pago, text, format, newFormatPdf);
-            }
-
-            ResolverReferencia(pago, text, nombreArchivo);
-            ResolverEnteFallback(pago, text, path, nombreArchivo, reader, format);
-            AplicarValidacionesFinales(pago, cantLineas);
 
             return pago;
         }
@@ -918,7 +933,95 @@ namespace AdminPagosDLL.Core
             }
         }
 
-        internal int ParsearLineasEstandar(PagoEfectuado pago, string text, Formatos format, bool newFormatPdf)
+        internal void ParsearTelecentro(PagoEfectuado pago, string text, string nombreArchivo, Formatos format)
+        {
+            using (StringReader readerTxt = new StringReader(text))
+            {
+                string line;
+                while ((line = readerTxt.ReadLine()) != null)
+                {
+                    var lineaFormato = line.Split(':');
+                    string clave = lineaFormato[0];
+                    string valor = "";
+                    valor = lineaFormato.Count() > 1 ? lineaFormato[1] : "";
+                    valor = valor.Trim();
+
+                    switch (clave.Trim())
+                    {
+                        case "Fecha":
+                            if (!String.IsNullOrEmpty(valor))
+                            {
+                                pago.FechaPago = format.CrearFecha(valor);
+                            }
+                            break;
+                        case "www.telecentro.com.ar":
+                            pago.Ente = EEnte.Telecentro;
+                            break;
+
+                        default:
+
+                            // IMPORTE
+                            if (clave.Contains("TOTAL A PAGAR"))
+                            {
+                                // El patrón maneja el signo $, los espacios raros del PDF y el importe XXXXX.XX
+                                string patron = @"TOTAL A PAGAR[\s\u00A0]*\$\s*(?<importe>\d+\.\d{2})";
+
+                                Match match = Regex.Match(clave, patron, RegexOptions.IgnoreCase);
+
+                                if (match.Success)
+                                {
+                                    // Extrae "4038.00" y lo convierte directo usando la configuración internacional (punto decimal)
+                                    pago.Importe = Convert.ToDecimal(match.Groups["importe"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                                }
+                            }
+
+                            // NRO CLIENTE
+                            else if (clave.Contains("N° DE CLIENTE"))
+                            {
+                                // El patrón busca la frase fija y captura solo los dígitos que le siguen
+                                string patron = @"N° DE CLIENTE\s*(?<cliente>\d+)";
+
+                                Match match = Regex.Match(clave, patron, RegexOptions.IgnoreCase);
+
+                                if (match.Success)
+                                {
+                                    // Extrae únicamente los dígitos (ej: "2398966")
+                                    pago.NroCliente = match.Groups["cliente"].Value;
+                                }
+                            }
+
+                            // VENCIMEINTO
+                            else if (clave.Contains("VENCIMIENTO"))
+                            {
+                                // El patrón busca la palabra y captura el formato dd/mm/aaaa
+                                string patron = @"VENCIMIENTO\s*(?<vencimiento>\d{2}/\d{2}/\d{4})";
+
+                                Match match = Regex.Match(clave, patron, RegexOptions.IgnoreCase);
+
+                                if (match.Success)
+                                {
+                                    // Extrae "08/09/2022"
+                                    string fechaVencimiento = match.Groups["vencimiento"].Value;
+                                    pago.FechaVencimiento = format.CrearFecha(fechaVencimiento);
+                                }
+                            }
+
+                            break;
+                    }
+
+                    if (pago.FechaPago != default(DateTime) &&
+                        pago.FechaVencimiento != default(DateTime) &&
+                        pago.Importe != 0 &&
+                        pago.Ente != EEnte.Desconocido &&
+                        pago.NroCliente != "")
+                    {
+                        return;
+                    }
+                }
+            }
+        }
+
+        internal int ParsearLineasEstandar(PagoEfectuado pago, string text, Formatos format, ETipoDocumento tipoDoc)
         {
             using (StringReader readerTxt = new StringReader(text))
             {
@@ -971,7 +1074,6 @@ namespace AdminPagosDLL.Core
 
                         case "Código/Usuario":
                         case "Codigo/Usuario":
-                        case "Nº DE CLIENTE":
                         case "Nro de Cliente":
                         case "NRO. DE CLIENTE":
 
@@ -1075,12 +1177,13 @@ namespace AdminPagosDLL.Core
 
                         default:
 
-                            if (newFormatPdf)
+                            if (tipoDoc == ETipoDocumento.ComprobanteBcoPciaModerno)
                             {
                                 if (lineaAnterior == "Operación realizada con éxito")
                                 {
                                     pago.FechaPago = format.CrearFecha(line);
                                 }
+
                                 if (line.Contains("Número de transacción"))
                                 {
                                     var resultado = format.CrearFecha(lineaAnterior);
@@ -1089,6 +1192,9 @@ namespace AdminPagosDLL.Core
                                         pago.FechaPago = resultado;
                                         var valores = line.Split(' ');
                                         pago.NroTransaccion = valores[valores.Length - 2];
+
+                                        //Sino validar con esta variable
+                                        //valor
                                     }
                                 }
                             }
@@ -1100,6 +1206,27 @@ namespace AdminPagosDLL.Core
                                 {
                                     pago.Ente = ExtractEnteFromLine(clave, pago, text);
                                 }
+
+                                else if (lineaAnterior == "Total pagado")
+                                {
+                                    pago.Importe = decimal.Parse(clave.Replace("$", "").Trim());
+                                }
+
+                                else if (lineaAnterior.Contains("Pago en"))
+                                {
+                                    // El patrón busca 2 dígitos, dos puntos, 2 dígitos, dos puntos y 4 dígitos
+                                    string patron = @"(?<dia>\d{2}):(?<mes>\d{2}):(?<anio>\d{4})";
+
+                                    Match match2 = Regex.Match(line, patron);
+
+                                    if (match2.Success)
+                                    {
+                                        // Reconstruimos la fecha con el formato estándar de barras (04/12/2020)
+                                        string fechaPago = $"{match2.Groups["dia"].Value}/{match2.Groups["mes"].Value}/{match2.Groups["anio"].Value}";
+                                        pago.FechaPago = format.CrearFecha(fechaPago);
+                                    }
+                                }
+
                                 else if (lineaAnterior == "Pagador Fecha de pago" ||
                                     lineaAnterior == "Pagador final Pago es")
                                 {
