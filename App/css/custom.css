@@ -1194,6 +1194,26 @@ table.dataTable.no-footer {
 
 /* ---- Faltantes grid ---- */
 
+.faltantes-toolbar {
+    margin-bottom: 0.75rem;
+}
+
+.faltantes-toolbar label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text);
+}
+
+.faltantes-toolbar select {
+    border: 1px solid var(--line);
+    border-radius: 0.45rem;
+    background: var(--surface);
+    color: var(--text);
+    padding: 0.3rem 0.6rem;
+}
+
 .faltantes-summary {
     display: flex;
     flex-wrap: wrap;

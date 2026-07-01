@@ -223,10 +223,12 @@ function updateFilterIndicator() {
 
 var _detalleRows = [];
 var _detalleLabel = '';
+var _faltantesEnteFilter = '';
 
 function openDetalleModal(label, rows) {
     _detalleRows = rows;
     _detalleLabel = label;
+    _faltantesEnteFilter = '';
     $('#detalleTitulo').text('Detalle: ' + label);
     activarTabDetalle('resumen');
     $('#modalDetalle').removeAttr('aria-hidden');
@@ -363,7 +365,30 @@ function parseMonthYear(row) {
 var MESES_ABREV = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
 function renderFaltantesView() {
-    var rows = _detalleRows;
+    var allRows = _detalleRows;
+    var entes = {};
+    entes[''] = 'Todos los entes';
+
+    allRows.each(function (item) {
+        var enteName = (item[1] || 'Desconocido').toString();
+        if (!entes[enteName]) entes[enteName] = enteName;
+    });
+
+    var filtroHtml = '<div class="faltantes-toolbar">' +
+        '<label><span>Ente</span><select id="faltantesEnteFilter">';
+    Object.keys(entes).sort(function (a, b) { return a === '' ? -1 : a.localeCompare(b); }).forEach(function (k) {
+        var sel = _faltantesEnteFilter === k ? ' selected' : '';
+        filtroHtml += '<option value="' + escapeHtmlAttr(k) + '"' + sel + '>' + (k || entes[k]) + '</option>';
+    });
+    filtroHtml += '</select></label></div>';
+
+    var rows = allRows;
+    if (_faltantesEnteFilter) {
+        rows = allRows.filter(function (item) {
+            return (item[1] || 'Desconocido').toString() === _faltantesEnteFilter;
+        });
+    }
+
     var pagosPorMes = {};
     var minYear = 9999, minMonth = 13;
     var maxYear = 0, maxMonth = 0;
@@ -438,7 +463,7 @@ function renderFaltantesView() {
         '<span><span class="legend-dot missing"></span> Sin pagos</span>' +
         '</div>';
 
-    $('#detalleTableWrap').html(sumHtml + '<div class="faltantes-grid">' + yearsHtml + '</div>' + legendHtml);
+    $('#detalleTableWrap').html(filtroHtml + sumHtml + '<div class="faltantes-grid">' + yearsHtml + '</div>' + legendHtml);
 }
 
 function mapPagosToData(pagos) {
@@ -778,6 +803,11 @@ $(document).ready(function () {
         $(this).toggleClass('expanded');
         var parent = $(this).data('group');
         $(this).nextUntil('.detalle-group-row').filter('[data-parent="' + parent + '"]').toggle();
+    });
+
+    $('#detalleTableWrap').on('change', '#faltantesEnteFilter', function () {
+        _faltantesEnteFilter = $(this).val();
+        renderFaltantesView();
     });
 
     $('#btnInfoUsdActualizado').on('click', abrirModalInfoUsd);

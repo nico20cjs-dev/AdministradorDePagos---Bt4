@@ -323,11 +323,11 @@ namespace AdminPagosDLL.Core
                         using (reader)
                         {
                             string text = string.Empty;
-                            var (pageRead, pageEnd, tipoDoc) = ObtenerRangoPaginas(reader, nombreArchivo, path);
+                            var rango = ObtenerRangoPaginas(reader, nombreArchivo, path);
 
-                            for (; pageRead < pageEnd; pageRead++)
+                            for (; rango.Inicio < rango.Fin; rango.Inicio++)
                             {
-                                text += PdfTextExtractor.GetTextFromPage(reader, pageRead);
+                                text += PdfTextExtractor.GetTextFromPage(reader, rango.Inicio);
 
                                 if (!EsComprobantePago(text, nombreArchivo))
                                 {
@@ -336,7 +336,7 @@ namespace AdminPagosDLL.Core
                                     continue;
                                 }
 
-                                var pago = ProcesarTextoComprobante(text, path, nombreArchivo, reader, format, tipoDoc);
+                                var pago = ProcesarTextoComprobante(text, path, nombreArchivo, reader, format, rango.TipoDoc);
                                 AgregarPago(pago);
                             }
                         }
@@ -542,11 +542,11 @@ namespace AdminPagosDLL.Core
                 using (reader)
                 {
                     string text = string.Empty;
-                    var (pageRead, pageEnd, tipoDoc) = ObtenerRangoPaginas(reader, nombreArchivo, path);
+                    var rango = ObtenerRangoPaginas(reader, nombreArchivo, path);
 
-                    for (; pageRead < pageEnd; pageRead++)
+                    for (; rango.Inicio < rango.Fin; rango.Inicio++)
                     {
-                        text += PdfTextExtractor.GetTextFromPage(reader, pageRead);
+                        text += PdfTextExtractor.GetTextFromPage(reader, rango.Inicio);
 
                         if (!EsComprobantePago(text, nombreArchivo))
                         {
@@ -556,7 +556,7 @@ namespace AdminPagosDLL.Core
                             return null;
                         }
 
-                        pago = ProcesarTextoComprobante(text, path, nombreArchivo, reader, format, tipoDoc);
+                        pago = ProcesarTextoComprobante(text, path, nombreArchivo, reader, format, rango.TipoDoc);
                         AgregarPago(pago);
                     }
                 }
@@ -656,14 +656,24 @@ namespace AdminPagosDLL.Core
             return oldState;
         }
 
+        public class RangoPaginasResult
+        {
+            public int Inicio { get; set; }
+            public int Fin { get; set; }
+            public ETipoDocumento TipoDoc { get; set; }
+        }
+
         /// <summary>
         /// Determina el rango de páginas a leer según el tipo de archivo y cantidad de páginas.
         /// </summary>
-        private (int inicio, int fin, ETipoDocumento tipoDoc) ObtenerRangoPaginas(PdfReader reader, string nombreArchivo, string path)
+        private RangoPaginasResult ObtenerRangoPaginas(PdfReader reader, string nombreArchivo, string path)
         {
             int pageRead = 1;
             int pageEnd = 2;
             ETipoDocumento tipoDoc = ETipoDocumento.Desconocido;
+
+            // Extraemos el texto de la página actual de forma ultra rápida
+            string textoPagina = PdfTextExtractor.GetTextFromPage(reader, pageRead);
 
             if (nombreArchivo.ToLower().Contains("flow"))
             {
@@ -674,31 +684,28 @@ namespace AdminPagosDLL.Core
                 }
             }
             else if (
-                nombreArchivo.ToLower().Contains("expensa") && nombreArchivo.ToLower().Contains("san rafael")
-                || (path.Contains("SAN RAFAEL") && nombreArchivo.ToLower().Contains("exp"))
+                textoPagina.ToLower().Contains("expensa") && textoPagina.ToLower().Contains("san rafael")
                 )
             {
                 // es Expensas HY
-                if (!nombreArchivo.ToLower().Contains("movistar"))
-                {
-                    
-                    tipoDoc = ETipoDocumento.ExpensasAdmSanRafael;
 
-                    if (reader.NumberOfPages == 1)
-                    {
-                        pageRead = 1;
-                        pageEnd = 2;
-                    }
-                    else if (reader.NumberOfPages == 4)
-                    {
-                        pageRead = 3;
-                        pageEnd = 4;
-                    }
-                    else if (reader.NumberOfPages == 5)
-                    {
-                        pageRead = 4;
-                        pageEnd = 5;
-                    }
+                tipoDoc = ETipoDocumento.ExpensasAdmSanRafael;
+
+                if (reader.NumberOfPages == 1)
+                {
+                    pageRead = 1;
+                    pageEnd = 2;
+                }
+                else if (reader.NumberOfPages == 4)
+                {
+                    //Que lea las ultimas 2 hojas
+                    pageRead = 3;
+                    pageEnd = 5; //se agrega una mas para que salga cuando llega a una menos
+                }
+                else if (reader.NumberOfPages == 5)
+                {
+                    pageRead = 4;
+                    pageEnd = 5;
                 }
             }
             else if (nombreArchivo.ToLower().Contains("gesell")
@@ -734,11 +741,8 @@ namespace AdminPagosDLL.Core
 
             if (reader.NumberOfPages == 2)
             {
-                //Puede ser una factura de Telecentro
+                // Puede ser una factura de Telecentro
                 
-                // Extraemos el texto de la página actual de forma ultra rápida
-                string textoPagina = PdfTextExtractor.GetTextFromPage(reader, pageRead);
-
                 if (textoPagina.Contains("Telecentro"))
                 {
                     // Es una factura o comprobante de tipo "Telecentro", no es "ExpensasHY"
@@ -746,7 +750,7 @@ namespace AdminPagosDLL.Core
                 }
             }
 
-            return (pageRead, pageEnd, tipoDoc);
+            return new RangoPaginasResult { Inicio = pageRead, Fin = pageEnd, TipoDoc = tipoDoc };
         }
 
         /// <summary>
@@ -898,6 +902,14 @@ namespace AdminPagosDLL.Core
 
         internal void ParsearExpensasHY(PagoEfectuado pago, string text, string nombreArchivo, Formatos format)
         {
+            bool formatoGrande = true;
+
+            //Si es chico
+            if (text.Contains("Datos para transferencia bancaria"))
+            {
+                formatoGrande = false;
+            }
+
             using (StringReader readerTxt = new StringReader(text))
             {
                 string line;
@@ -908,21 +920,53 @@ namespace AdminPagosDLL.Core
 
                     try
                     {
-                        if (!clave.Contains("016"))
+                        if (formatoGrande)
                         {
-                            continue;
+                            if (line.Contains("Período de rendición:"))
+                            {
+                                // El patrón busca la palabra fija y captura el bloque con formato de fecha dd/mm/aaaa
+                                string patron = @"Vencimiento:\s*(?<vencimiento>\d{2}/\d{2}/\d{4})";
+
+                                Match match = Regex.Match(line, patron, RegexOptions.IgnoreCase);
+
+                                if (match.Success)
+                                {
+                                    // Extrae únicamente "30/07/2020"
+                                    string fechaVencimiento = match.Groups["vencimiento"].Value;
+                                    pago.FechaVencimiento = format.CrearFecha(fechaVencimiento);
+                                }
+                            }
+
+                            // Registro del Depto
+                            if (clave.Contains("016"))
+                            {
+                                var valores = clave.Split(' ');
+
+                                
+                                pago.Importe = decimal.Parse(valores.Last().Replace("$", ""));
+                                break;
+                            }
                         }
-
-                        if (clave.Contains("016"))
+                        else
                         {
-                            var valores = clave.Split(' ');
-                            pago.Referencia = EReferencia.Norma;
-                            pago.Ente = EEnte.ExpSanRafael;
+                            // El patrón busca la frase, captura la fecha (dd/mm/aaaa) y luego el importe monetario
+                            string patron = @"1er Vencimiento\s+(?<vto>\d{2}/\d{2}/\d{4})\s+(?<importe>\d+(?:\.\d{3})*,\d{2})";
 
-                            pago.Importe = decimal.Parse(valores.Last().Replace("$", ""));
-                            pago.FechaPago = format.CrearFecha(nombreArchivo.Split(' ').FirstOrDefault());
-                            pago.FechaVencimiento = pago.FechaPago;
-                            break;
+                            Match match = Regex.Match(line, patron, RegexOptions.IgnoreCase);
+
+                            if (match.Success)
+                            {
+                                // 1. Extrae la fecha de vencimiento (ej: "19/01/2024")
+                                string fechaVto = match.Groups["vto"].Value;
+                                pago.FechaVencimiento = format.CrearFecha(fechaVto);
+
+                                // 2. Extrae el string del importe (ej: "35.025,16")
+                                string importeString = match.Groups["importe"].Value;
+
+                                // Conversión limpia a decimal para tus cálculos
+                                decimal importeDecimal = Convert.ToDecimal(importeString.Replace(".", ""));
+                                pago.Importe = importeDecimal;
+                            }
                         }
                     }
                     catch (Exception)
@@ -931,6 +975,9 @@ namespace AdminPagosDLL.Core
                     }
                 }
             }
+
+            pago.Referencia = EReferencia.Norma;
+            pago.Ente = EEnte.ExpSanRafael;
         }
 
         internal void ParsearTelecentro(PagoEfectuado pago, string text, string nombreArchivo, Formatos format)
