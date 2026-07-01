@@ -222,11 +222,13 @@ function updateFilterIndicator() {
 }
 
 var _detalleRows = [];
+var _detalleLabel = '';
 
 function openDetalleModal(label, rows) {
     _detalleRows = rows;
+    _detalleLabel = label;
     $('#detalleTitulo').text('Detalle: ' + label);
-    renderDetalleTable($('#detalleGroupBy').val());
+    activarTabDetalle('resumen');
     $('#modalDetalle').removeAttr('aria-hidden');
     $('body').addClass('no-scroll');
 }
@@ -236,23 +238,45 @@ function closeDetalleModal() {
     $('body').removeClass('no-scroll');
 }
 
+function activarTabDetalle(tab) {
+    var isResumen = tab === 'resumen';
+    $('#detalleTabResumen').toggleClass('active', isResumen).attr('aria-selected', isResumen ? 'true' : 'false');
+    $('#detalleTabFaltantes').toggleClass('active', !isResumen).attr('aria-selected', !isResumen ? 'true' : 'false');
+    $('#detalleToolbarResumen').toggle(isResumen);
+    if (isResumen) {
+        renderDetalleTable($('#detalleGroupBy').val());
+    } else {
+        renderFaltantesView();
+    }
+}
+
 function renderDetalleTable(groupBy) {
     var groups = {};
     var rows = _detalleRows;
+    var isByYear = groupBy === 'year';
 
     rows.each(function (item) {
-        var key;
-        if (groupBy === 'year') {
+        var pk, sk;
+        if (isByYear) {
             var fecha = (item[8] || '').toString();
-            key = fecha.substring(0, 4) || 'Sin fecha';
+            pk = fecha.substring(0, 4) || 'Sin fecha';
+            sk = (item[1] || 'Desconocido').toString();
         } else {
-            key = (item[1] || 'Desconocido').toString();
+            pk = (item[1] || 'Desconocido').toString();
+            var fecha = (item[8] || '').toString();
+            sk = fecha.substring(0, 4) || 'Sin fecha';
         }
-        if (!groups[key]) groups[key] = { count: 0, ars: 0, usd: 0, usdActualizado: 0 };
-        groups[key].count++;
-        groups[key].ars += Number(item[9]) || 0;
-        groups[key].usd += Number(item[10]) || 0;
-        groups[key].usdActualizado += Number(item[11]) || 0;
+        if (!groups[pk]) groups[pk] = { count: 0, ars: 0, usd: 0, usdActualizado: 0, subGroups: {} };
+        groups[pk].count++;
+        groups[pk].ars += Number(item[9]) || 0;
+        groups[pk].usd += Number(item[10]) || 0;
+        groups[pk].usdActualizado += Number(item[11]) || 0;
+
+        if (!groups[pk].subGroups[sk]) groups[pk].subGroups[sk] = { count: 0, ars: 0, usd: 0, usdActualizado: 0 };
+        groups[pk].subGroups[sk].count++;
+        groups[pk].subGroups[sk].ars += Number(item[9]) || 0;
+        groups[pk].subGroups[sk].usd += Number(item[10]) || 0;
+        groups[pk].subGroups[sk].usdActualizado += Number(item[11]) || 0;
     });
 
     var keys = Object.keys(groups);
@@ -261,22 +285,42 @@ function renderDetalleTable(groupBy) {
         return;
     }
 
-    keys.sort(groupBy === 'year'
+    keys.sort(isByYear
         ? function (a, b) { return b.localeCompare(a); }
         : function (a, b) { return a.localeCompare(b); });
 
     var totalCount = 0, totalArs = 0, totalUsd = 0, totalUsdActualizado = 0;
-    var colGroup = groupBy === 'year' ? 'Año' : 'Ente';
+    var colGroup = isByYear ? 'A\u00f1o' : 'Ente';
     var html = '<table class="detalle-table">' +
         '<thead><tr><th>' + colGroup + '</th><th class="num">Cant Pagos</th><th class="num">Total $</th><th class="num">Total USD</th><th class="num">USD Actualizados</th></tr></thead><tbody>';
 
+    var groupIdx = 0;
     keys.forEach(function (k) {
         var g = groups[k];
-        html += '<tr><td>' + escapeHtmlAttr(k) + '</td>' +
+        var idx = 'g' + (groupIdx++);
+
+        html += '<tr class="detalle-group-row" data-group="' + idx + '">' +
+            '<td><span class="detalle-chevron"></span> ' + escapeHtmlAttr(k) + '</td>' +
             '<td class="num">' + g.count + '</td>' +
             '<td class="num">' + formatArs(g.ars) + '</td>' +
             '<td class="num">' + formatUsd(g.usd) + '</td>' +
             '<td class="num">' + formatUsd(g.usdActualizado) + '</td></tr>';
+
+        var subKeys = Object.keys(g.subGroups);
+        subKeys.sort(function (a, b) {
+            return isByYear ? a.localeCompare(b) : b.localeCompare(a);
+        });
+
+        subKeys.forEach(function (sk) {
+            var sg = g.subGroups[sk];
+            html += '<tr class="detalle-sub-row" data-parent="' + idx + '" style="display:none">' +
+                '<td>' + escapeHtmlAttr(sk) + '</td>' +
+                '<td class="num">' + sg.count + '</td>' +
+                '<td class="num">' + formatArs(sg.ars) + '</td>' +
+                '<td class="num">' + formatUsd(sg.usd) + '</td>' +
+                '<td class="num">' + formatUsd(sg.usdActualizado) + '</td></tr>';
+        });
+
         totalCount += g.count;
         totalArs += g.ars;
         totalUsd += g.usd;
@@ -290,6 +334,111 @@ function renderDetalleTable(groupBy) {
         '<td class="num">' + formatUsd(totalUsdActualizado) + '</td></tr></tfoot></table>';
 
     $('#detalleTableWrap').html(html);
+}
+
+function parseMonthYear(row) {
+    var fechaStr = (row[4] || '').toString();
+    if (fechaStr && fechaStr.indexOf('-') !== -1) {
+        var parts = fechaStr.split('-');
+        return { year: parseInt(parts[0], 10), month: parseInt(parts[1], 10) };
+    }
+    var cuotaStr = (row[5] || '').toString();
+    if (cuotaStr && cuotaStr.indexOf('/') !== -1) {
+        var cParts = cuotaStr.split('/');
+        var mes = parseInt(cParts[0], 10);
+        var año = parseInt(cParts[1], 10);
+        if (año < 100) año += (año < 50 ? 2000 : 1900);
+        if (mes >= 1 && mes <= 12 && año >= 1900) {
+            return { year: año, month: mes };
+        }
+    }
+    var fechaPagoStr = (row[8] || '').toString();
+    if (fechaPagoStr && fechaPagoStr.indexOf('-') !== -1) {
+        var pParts = fechaPagoStr.split('-');
+        return { year: parseInt(pParts[0], 10), month: parseInt(pParts[1], 10) };
+    }
+    return null;
+}
+
+var MESES_ABREV = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+function renderFaltantesView() {
+    var rows = _detalleRows;
+    var pagosPorMes = {};
+    var minYear = 9999, minMonth = 13;
+    var maxYear = 0, maxMonth = 0;
+
+    rows.each(function (item) {
+        var my = parseMonthYear(item);
+        if (!my) return;
+        var key = my.year + '-' + (my.month < 10 ? '0' : '') + my.month;
+        if (!pagosPorMes[key]) pagosPorMes[key] = { count: 0, ars: 0 };
+        pagosPorMes[key].count++;
+        pagosPorMes[key].ars += Number(item[9]) || 0;
+
+        if (my.year < minYear || (my.year === minYear && my.month < minMonth)) {
+            minYear = my.year; minMonth = my.month;
+        }
+        if (my.year > maxYear || (my.year === maxYear && my.month > maxMonth)) {
+            maxYear = my.year; maxMonth = my.month;
+        }
+    });
+
+    var keys = Object.keys(pagosPorMes);
+    if (keys.length === 0) {
+        $('#detalleTableWrap').html('<p class="stats-ref-empty">Sin pagos para analizar</p>');
+        return;
+    }
+
+    var today = new Date();
+    var curYear = today.getFullYear();
+    var curMonth = today.getMonth() + 1;
+    if (maxYear > curYear || (maxYear === curYear && maxMonth > curMonth)) {
+        maxYear = curYear;
+        maxMonth = curMonth;
+    }
+
+    var totalPagos = keys.length;
+    var totalFaltantes = 0;
+    var yearsHtml = '';
+
+    for (var y = maxYear; y >= minYear; y--) {
+        var startM = (y === maxYear) ? maxMonth : 12;
+        var endM = (y === minYear) ? minMonth : 1;
+        var monthsHtml = '';
+        var yearHasAny = false;
+
+        for (var m = startM; m >= endM; m--) {
+            var mk = y + '-' + (m < 10 ? '0' : '') + m;
+            var isPresent = pagosPorMes.hasOwnProperty(mk);
+            if (!isPresent) totalFaltantes++;
+            if (!isPresent && !yearHasAny && y !== maxYear) {
+                yearHasAny = true;
+            }
+            var tooltip = isPresent
+                ? MESES_ABREV[m - 1] + ' ' + y + ' — ' + formatArs(pagosPorMes[mk].ars)
+                : MESES_ABREV[m - 1] + ' ' + y + ' — Sin pagos';
+            monthsHtml += '<span class="faltantes-month' + (isPresent ? ' present' : ' missing') + '" title="' + tooltip + '">' + MESES_ABREV[m - 1] + '</span>';
+        }
+
+        yearsHtml += '<div class="faltantes-year">' +
+            '<span class="faltantes-year-label">' + y + '</span>' +
+            '<div class="faltantes-months">' + monthsHtml + '</div>' +
+            '</div>';
+    }
+
+    var sumHtml = '<div class="faltantes-summary">' +
+        '<span>Desde <strong>' + MESES_ABREV[minMonth - 1] + ' ' + minYear + '</strong> hasta <strong>' + MESES_ABREV[maxMonth - 1] + ' ' + maxYear + '</strong></span>' +
+        '<span class="found">' + totalPagos + ' encontrados</span>' +
+        '<span class="missing">' + totalFaltantes + ' faltantes</span>' +
+        '</div>';
+
+    var legendHtml = '<div class="faltantes-legend">' +
+        '<span><span class="legend-dot present"></span> Con pagos</span>' +
+        '<span><span class="legend-dot missing"></span> Sin pagos</span>' +
+        '</div>';
+
+    $('#detalleTableWrap').html(sumHtml + '<div class="faltantes-grid">' + yearsHtml + '</div>' + legendHtml);
 }
 
 function mapPagosToData(pagos) {
@@ -349,6 +498,7 @@ function leerPdf(action) {
                 el.attr('title', 'No se pudieron abrir: ' + (respuesta.cantNoAbiertos || 0)
                     + ' | No se pudieron identificar: ' + (respuesta.cantNoIdentificados || 0)
                     + ' | Datos incompletos: ' + (respuesta.cantNoValidos || 0));
+                $('#btnDetalleFallos').toggleClass('is-hidden', total === 0);
                 window._fallosData = {
                     noAbiertosPaths: respuesta.noAbiertosPaths || [],
                     noIdentificadosPaths: respuesta.noIdentificadosPaths || [],
@@ -410,6 +560,7 @@ function reprocesarPago(path, buttonEl) {
                     el.attr('title', 'No se pudieron abrir: ' + (respuesta.cantNoAbiertos || 0)
                         + ' | No se pudieron identificar: ' + (respuesta.cantNoIdentificados || 0)
                         + ' | Datos incompletos: ' + (respuesta.cantNoValidos || 0));
+                    $('#btnDetalleFallos').toggleClass('is-hidden', total === 0);
                     window._fallosData = {
                         noAbiertosPaths: respuesta.noAbiertosPaths || [],
                         noIdentificadosPaths: respuesta.noIdentificadosPaths || [],
@@ -543,6 +694,16 @@ function cerrarModalInfoUsd() {
     $('body').removeClass('no-scroll');
 }
 
+function abrirModalAyuda() {
+    $('#modalAyuda').removeAttr('aria-hidden');
+    $('body').addClass('no-scroll');
+}
+
+function cerrarModalAyuda() {
+    $('#modalAyuda').attr('aria-hidden', 'true');
+    $('body').removeClass('no-scroll');
+}
+
 $(document).ready(function () {
     initTheme();
     initFontSize();
@@ -606,11 +767,29 @@ $(document).ready(function () {
     $('#detalleGroupBy').on('change', function () {
         renderDetalleTable($(this).val());
     });
+    $('#detalleTabResumen').on('click', function () {
+        activarTabDetalle('resumen');
+    });
+    $('#detalleTabFaltantes').on('click', function () {
+        activarTabDetalle('faltantes');
+    });
+
+    $('#detalleTableWrap').on('click', '.detalle-group-row', function () {
+        $(this).toggleClass('expanded');
+        var parent = $(this).data('group');
+        $(this).nextUntil('.detalle-group-row').filter('[data-parent="' + parent + '"]').toggle();
+    });
 
     $('#btnInfoUsdActualizado').on('click', abrirModalInfoUsd);
     $('#modalInfoUsdCerrar, #modalInfoUsdCerrarBtn').on('click', cerrarModalInfoUsd);
     $('#modalInfoUsd').on('click', function (e) {
         if (e.target === this) cerrarModalInfoUsd();
+    });
+
+    $('#btnAyuda').on('click', abrirModalAyuda);
+    $('#modalAyudaCerrar, #modalAyudaCerrarBtn').on('click', cerrarModalAyuda);
+    $('#modalAyuda').on('click', function (e) {
+        if (e.target === this) cerrarModalAyuda();
     });
 
     $(document).on('keydown', function (e) {
@@ -697,11 +876,19 @@ $(document).ready(function () {
                 selectEnte: $('#selectEnte').val()
             };
             data.filtersCollapsed = $('#filtersPanel').hasClass('is-collapsed');
+            if (data.columns) {
+                for (var i = 0; i < data.columns.length; i++) {
+                    if (data.columns[i].search) {
+                        data.columns[i].search.search = '';
+                    }
+                }
+            }
         },
         aoColumnDefs: [
             { bSortable: false, aTargets: [6, 13] },
             { bSearchable: false, aTargets: [13] },
-            { sWidth: '60px', aTargets: [13] },
+            { targets: [6], className: 'dt-center' },
+            { targets: [13], sWidth: '60px' },
             { sWidth: '120px', aTargets: [4, 8, 9, 10, 11] },
             { targets: [9, 10, 11], className: 'dt-right', render: function (data, type) {
                 if (type === 'display') {

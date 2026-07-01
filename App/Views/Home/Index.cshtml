@@ -48,6 +48,10 @@
                     <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><polyline points="4 7 4 4 20 4 20 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="9" y1="20" x2="15" y2="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="4" x2="12" y2="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                     <span>Texto normal</span>
                 </button>
+                <button id="btnAyuda" class="btn btn-ghost" type="button" title="¿Cómo usar el sitio? - Ayuda">
+                    <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg>
+                    <span>Ayuda</span>
+                </button>
                 <button id="btnActualizarPdf" class="btn btn-primary" type="button" title="Actualizar la lista de pagos desde los comprobantes PDF">
                     <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M1 4v6h6m16 10v-6h-6M3.51 15a9 9 0 0 0 14.85 3.36l-2.12-2.12a5.5 5.5 0 0 1-8.37-.74M20.49 9a9 9 0 0 0-14.85-3.36l2.12 2.12a5.5 5.5 0 0 1 8.37.74"/></svg>
                     <span>Actualizar pagos</span>
@@ -71,9 +75,11 @@
                 <p id="dolaresActualizadosCalculados" class="stat-value-usd-actualizado">USD 0.00</p>
             </article>
             <article class="stat-card stat-card-warn">
-                <p class="stat-label">No procesados</p>
-                <p id="noProcesados" class="stat-value">0</p>
-                <button id="btnDetalleFallos" class="stat-action" type="button" title="Ver detalle de archivos no procesados">
+                <span class="stat-group">
+                    <span class="stat-label">No procesados</span>
+                    <span id="noProcesados" class="stat-value">0</span>
+                </span>
+                <button id="btnDetalleFallos" class="stat-action is-hidden" type="button" title="Ver detalle de archivos no procesados">
                     <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M8 6h8M8 12h8m-8 6h5"/><rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/></svg>
                     Detalle
                 </button>
@@ -216,7 +222,11 @@
                 <button id="modalDetalleCerrar" class="modal-close" type="button" aria-label="Cerrar" title="Cerrar ventana">&times;</button>
             </header>
             <div class="modal-body">
-                <div class="detalle-toolbar">
+                <div class="detalle-tabs" role="tablist" aria-label="Vistas del detalle">
+                    <button id="detalleTabResumen" class="detalle-tab active" type="button" role="tab" aria-selected="true" title="Ver resumen agrupado">Resumen</button>
+                    <button id="detalleTabFaltantes" class="detalle-tab" type="button" role="tab" aria-selected="false" title="Ver meses sin pagos">Pagos faltantes</button>
+                </div>
+                <div id="detalleToolbarResumen" class="detalle-toolbar">
                     <label>
                         <span>Agrupar por</span>
                         <select id="detalleGroupBy">
@@ -266,6 +276,50 @@
             </div>
             <footer class="modal-footer">
                 <button id="modalInfoUsdCerrarBtn" class="btn btn-ghost" type="button">Cerrar</button>
+            </footer>
+        </div>
+    </div>
+
+     <div id="modalAyuda" class="modal-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Ayuda del sitio">
+        <div class="modal-panel modal-panel-info modal-panel-ayuda">
+            <header class="modal-header">
+                <h2>¿Como usar el Administrador de Pagos?</h2>
+                <button id="modalAyudaCerrar" class="modal-close" type="button" aria-label="Cerrar" title="Cerrar ventana">&times;</button>
+            </header>
+            <div class="modal-body">
+                <p>Este sitio <strong>lee automaticamente tus comprobantes de pago</strong> (archivos PDF del banco, expensas, etc.) y los organiza en una tabla para que puedas verlos, filtrarlos y entender tus gastos de forma sencilla.</p>
+
+                <h3>Como empezar</h3>
+                <ol>
+                    <li>Hace clic en el boton <strong>"Actualizar pagos"</strong> (el azul que esta arriba a la derecha).</li>
+                    <li>Espera unos segundos mientras busca y procesa los comprobantes.</li>
+                    <li>Listo &mdash; todos tus pagos aparecen en la tabla.</li>
+                </ol>
+
+                <h3>Que podes hacer</h3>
+                <ul>
+                    <li><strong>Ver el resumen</strong>: las tarjetas de arriba te muestran el total en pesos, dolares y dolares ajustados por inflacion.</li>
+                    <li><strong>Filtrar</strong>: usa el boton "Mostrar filtros" para buscar por montos, por ente (quien cobra), por fecha o por referencia. Tambien podes escribir en las cajitas que estan abajo de cada columna de la tabla.</li>
+                    <li><strong>Abrir el PDF original</strong>: hace clic en el boton <strong>"Abrir"</strong> de la columna PDF para ver el comprobante tal cual esta guardado.</li>
+                    <li><strong>Reprocesar un pago</strong>: si ves que falta algo, el boton ↻ de cada fila vuelve a leer ese archivo.</li>
+                    <li><strong>Revisar los no procesados</strong>: si hay archivos con errores, la tarjeta amarilla de "No procesados" te dice cuantos son y te deja ver el detalle.</li>
+                    <li><strong>Pagos por referencia</strong>: las tarjetitas que aparecen abajo del resumen agrupan los pagos por categoria (ej. expensas, servicios, etc.). Haceles clic para verlos en detalle.</li>
+                </ul>
+
+                <h3>Modo oscuro y texto grande</h3>
+                <p>Los botones <strong>"Modo oscuro"</strong> y <strong>"Texto normal"</strong> te permiten cambiar la apariencia para que te resulte mas comodo leer.</p>
+
+                <div class="info-nota">
+                    <h3>Importante</h3>
+                    <ul>
+                        <li>Los datos se actualizan solos cada vez que presionas "Actualizar pagos".</li>
+                        <li>Los filtros se limpian al cerrar la pagina (no quedan guardados).</li>
+                        <li>Para corregir un pago, busca el PDF original y presiona el boton de reprocesar en esa fila.</li>
+                    </ul>
+                </div>
+            </div>
+            <footer class="modal-footer">
+                <button id="modalAyudaCerrarBtn" class="btn btn-ghost" type="button">Cerrar</button>
             </footer>
         </div>
     </div>
