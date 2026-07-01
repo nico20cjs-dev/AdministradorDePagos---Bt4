@@ -904,8 +904,14 @@ namespace AdminPagosDLL.Core
         {
             bool formatoGrande = true;
 
-            //Si es chico
-            if (text.Contains("Datos para transferencia bancaria"))
+            //Si NO es grande
+            if (// Tiene
+                (text.Contains("Datos para transferencia bancaria") ||
+                text.Contains("Copia Consorcista")
+                )
+                
+                &&
+                !text.Contains("Estado de cuentas y prorrateo")) //NO tiene
             {
                 formatoGrande = false;
             }
@@ -922,6 +928,7 @@ namespace AdminPagosDLL.Core
                     {
                         if (formatoGrande)
                         {
+                            // Fecha Vto
                             if (line.Contains("Período de rendición:"))
                             {
                                 // El patrón busca la palabra fija y captura el bloque con formato de fecha dd/mm/aaaa
@@ -937,36 +944,70 @@ namespace AdminPagosDLL.Core
                                 }
                             }
 
+                            else if (line.Contains("Mes vencimiento:"))
+                            {
+                                // El patrón busca la etiqueta "1º vto:" y captura la primera fecha dd/mm/aaaa que le sigue
+                                string patron = @"1º\s*vto:\s*(?<primero>\d{2}/\d{2}/\d{4})";
+
+                                Match match = Regex.Match(line, patron, RegexOptions.IgnoreCase);
+
+                                if (match.Success)
+                                {
+                                    // Extrae únicamente "15/01/2026"
+                                    string fechaPrimerVencimiento = match.Groups["primero"].Value;
+                                    pago.FechaVencimiento = format.CrearFecha(fechaPrimerVencimiento);
+                                }
+                            }
+
+                            else if (line.Contains("Período rendición"))
+                            {
+                                // El patrón busca "1º vencimiento:" y captura la fecha dd/mm/aaaa que le sigue
+                                string patron = @"1º\s*vencimiento:\s*(?<primero>\d{2}/\d{2}/\d{4})";
+
+                                Match match = Regex.Match(line, patron, RegexOptions.IgnoreCase);
+
+                                if (match.Success)
+                                {
+                                    // Extrae únicamente "16/06/2023"
+                                    string fechaPrimerVencimiento = match.Groups["primero"].Value;
+                                    pago.FechaVencimiento = format.CrearFecha(fechaPrimerVencimiento);
+                                }
+                            }
+
                             // Registro del Depto
                             if (clave.Contains("016"))
                             {
                                 var valores = clave.Split(' ');
-
-                                
                                 pago.Importe = decimal.Parse(valores.Last().Replace("$", ""));
                                 break;
                             }
                         }
                         else
                         {
-                            // El patrón busca la frase, captura la fecha (dd/mm/aaaa) y luego el importe monetario
-                            string patron = @"1er Vencimiento\s+(?<vto>\d{2}/\d{2}/\d{4})\s+(?<importe>\d+(?:\.\d{3})*,\d{2})";
 
-                            Match match = Regex.Match(line, patron, RegexOptions.IgnoreCase);
-
-                            if (match.Success)
+                            if (line.Contains("1er Vencimiento"))
                             {
-                                // 1. Extrae la fecha de vencimiento (ej: "19/01/2024")
-                                string fechaVto = match.Groups["vto"].Value;
-                                pago.FechaVencimiento = format.CrearFecha(fechaVto);
+                                // El patrón busca la frase, captura la fecha (dd/mm/aaaa) y luego el importe monetario
+                                string patron = @"1er Vencimiento\s+(?<vto>\d{2}/\d{2}/\d{4})\s+(?<importe>\d+(?:\.\d{3})*,\d{2})";
 
-                                // 2. Extrae el string del importe (ej: "35.025,16")
-                                string importeString = match.Groups["importe"].Value;
+                                Match match = Regex.Match(line, patron, RegexOptions.IgnoreCase);
 
-                                // Conversión limpia a decimal para tus cálculos
-                                decimal importeDecimal = Convert.ToDecimal(importeString.Replace(".", ""));
-                                pago.Importe = importeDecimal;
+                                if (match.Success)
+                                {
+                                    // 1. Extrae la fecha de vencimiento (ej: "19/01/2024")
+                                    string fechaVto = match.Groups["vto"].Value;
+                                    pago.FechaVencimiento = format.CrearFecha(fechaVto);
+
+                                    // 2. Extrae el string del importe (ej: "35.025,16")
+                                    string importeString = match.Groups["importe"].Value;
+
+                                    // Conversión limpia a decimal para tus cálculos
+                                    decimal importeDecimal = Convert.ToDecimal(importeString.Replace(".", ""));
+                                    pago.Importe = importeDecimal;
+                                }
                             }
+
+                            
                         }
                     }
                     catch (Exception)
@@ -974,6 +1015,11 @@ namespace AdminPagosDLL.Core
 
                     }
                 }
+            }
+
+            if (pago.FechaVencimiento == default(DateTime) || pago.Importe == 0)
+            { 
+                //TODO: hacer algo
             }
 
             pago.Referencia = EReferencia.Norma;
