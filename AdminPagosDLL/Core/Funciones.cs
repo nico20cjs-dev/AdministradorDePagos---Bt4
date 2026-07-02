@@ -293,7 +293,7 @@ namespace AdminPagosDLL.Core
 
                     string nombreArchivo = System.IO.Path.GetFileName(path);
 
-                    if (path.Contains("Norma\\000   PAGOS\\X X X X X X X X X\\tia CONCE\\2022\\METROGAS\\2022-05-26 Metrogas vto.26-5.pdf"))
+                    if (path.Contains("imaLiquidacionVisa02-12-2022_01.36.07"))
                     { 
                     
                     }
@@ -544,19 +544,26 @@ namespace AdminPagosDLL.Core
                     string text = string.Empty;
                     var rango = ObtenerRangoPaginas(reader, nombreArchivo, path);
 
-                    for (; rango.Inicio < rango.Fin; rango.Inicio++)
+                    // 1. EXTRAER: Consolidamos todo el texto del rango de páginas en una sola variable
+                    for (int i = rango.Inicio; i < rango.Fin; i++)
                     {
-                        text += PdfTextExtractor.GetTextFromPage(reader, rango.Inicio);
+                        text += PdfTextExtractor.GetTextFromPage(reader, i) + Environment.NewLine;
+                    }
 
-                        if (!EsComprobantePago(text, nombreArchivo))
-                        {
-                            CantNoIdentificados++;
-                            NoIdentificadosPaths.Add(path);
-                            SerializarDatos();
-                            return null;
-                        }
+                    // 2. VALIDAR: Evaluamos el bloque completo de texto una sola vez
+                    if (!EsComprobantePago(text, nombreArchivo))
+                    {
+                        CantNoIdentificados++;
+                        NoIdentificadosPaths.Add(path);
+                        SerializarDatos();
+                        return null;
+                    }
 
-                        pago = ProcesarTextoComprobante(text, path, nombreArchivo, reader, format, rango.TipoDoc);
+                    // 3. PROCESAR Y GUARDAR: Al tener todo el texto junto, los Regex van a encontrar los datos sin importar en qué página quedaron
+                    pago = ProcesarTextoComprobante(text, path, nombreArchivo, reader, format, rango.TipoDoc);
+
+                    if (pago != null)
+                    {
                         AgregarPago(pago);
                     }
                 }
@@ -815,7 +822,7 @@ namespace AdminPagosDLL.Core
 
             if (contieneFraseOk && !contieneFraseOmitir)
             {
-                if (nombreArchivo.Contains("historialPagosDetalle") || nombreArchivo.Contains(" VISA.pdf"))
+                if (nombreArchivo.Contains("historialPagosDetalle") || nombreArchivo.ToLower().Contains("visa"))
                     return false;
 
                 return true;
@@ -977,8 +984,25 @@ namespace AdminPagosDLL.Core
                             // Registro del Depto
                             if (clave.Contains("016"))
                             {
-                                var valores = clave.Split(' ');
-                                pago.Importe = decimal.Parse(valores.Last().Replace("$", ""));
+                                // Opcional 1: Obtiene el ULTIMO importe
+                                string patronImporteCol = @"(?<importe>\d+(?:\.\d{3})*,\d{2})(?=[a-zA-Z]*\s*$)";
+
+                                // Opcional 2: Obtiene el ANTEULTIMO importe (Mantenemos el nombre de grupo "importe")
+                                //string patronImporteCol = @"(?<importe>\d+(?:\.\d{3})*,\d{2})\s+\d+(?:\.\d{3})*,\d{2}[a-zA-Z]*\s*$";
+
+                                // NOTA: Asegurate de pasarle "clave" como variable a evaluar si "line" no existe
+                                Match match = Regex.Match(clave, patronImporteCol, RegexOptions.IgnoreCase);
+
+                                if (match.Success)
+                                {
+                                    // Al usar "importe" en ambos patrones, esta línea no cambia nunca
+                                    string importeString = match.Groups["importe"].Value;
+
+                                    // Conversión segura e internacional
+                                    decimal importeFinal = Convert.ToDecimal(importeString.Replace(".", "").Replace(",", "."), System.Globalization.CultureInfo.InvariantCulture);
+                                    pago.Importe = importeFinal;
+                                }
+
                                 break;
                             }
                         }
